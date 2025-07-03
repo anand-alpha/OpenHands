@@ -1,3 +1,6 @@
+import json
+import hashlib
+import time
 from pathlib import Path
 
 import toml
@@ -10,7 +13,101 @@ from openhands.events.event import Event
 from openhands.llm.metrics import Metrics
 
 _LOCAL_CONFIG_FILE_PATH = Path.home() / '.openhands' / 'config.toml'
+_SNC_AUTH_FILE_PATH = Path.home() / '.openhands' / 'snc_auth.json'
 _DEFAULT_CONFIG: dict[str, dict[str, list[str]]] = {'sandbox': {'trusted_dirs': []}}
+
+
+# SNC Authentication functions
+def store_snc_token(token: str) -> bool:
+    """Store SNC authentication token securely."""
+    try:
+        # Ensure the directory exists
+        _SNC_AUTH_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+        # Create auth data with timestamp
+        auth_data = {
+            'token_hash': hashlib.sha256(token.encode()).hexdigest(),
+            'timestamp': time.time(),
+            'status': 'active',
+        }
+
+        with open(_SNC_AUTH_FILE_PATH, 'w') as f:
+            json.dump(auth_data, f)
+
+        return True
+    except Exception:
+        return False
+
+
+def verify_snc_token() -> bool:
+    """Verify if user is authenticated with SNC."""
+    try:
+        if not _SNC_AUTH_FILE_PATH.exists():
+            return False
+
+        with open(_SNC_AUTH_FILE_PATH, 'r') as f:
+            auth_data = json.load(f)
+
+        # Check if token is active and not expired (24 hours)
+        if auth_data.get('status') == 'active':
+            token_age = time.time() - auth_data.get('timestamp', 0)
+            return token_age < 86400  # 24 hours in seconds
+
+        return False
+    except Exception:
+        return False
+
+
+def get_snc_auth_info() -> dict:
+    """Get SNC authentication information."""
+    try:
+        if not _SNC_AUTH_FILE_PATH.exists():
+            return {
+                'authenticated': False,
+                'token_age': None,
+                'reason': 'No authentication found',
+            }
+
+        with open(_SNC_AUTH_FILE_PATH, 'r') as f:
+            auth_data = json.load(f)
+
+        token_age = time.time() - auth_data.get('timestamp', 0)
+        expires_in = 86400 - token_age  # 24 hours in seconds
+        authenticated = auth_data.get('status') == 'active' and expires_in > 0
+
+        return {
+            'authenticated': authenticated,
+            'token_age': token_age,
+            'expires_in': max(0, expires_in),
+            'reason': 'Token expired' if expires_in <= 0 else None,
+        }
+    except Exception:
+        return {
+            'authenticated': False,
+            'token_age': None,
+            'reason': 'Error reading authentication data',
+        }
+
+
+def logout_snc() -> bool:
+    """Logout from SNC by removing authentication data."""
+    try:
+        if _SNC_AUTH_FILE_PATH.exists():
+            _SNC_AUTH_FILE_PATH.unlink()
+        return True
+    except Exception:
+        return False
+
+
+def validate_snc_token(token: str) -> bool:
+    """Validate SNC token format (basic validation)."""
+    # Basic token validation - adjust according to your SNC token format
+    if not token or len(token) < 10:
+        return False
+
+    # Add more specific validation rules based on SNC token format
+    # For example: check for specific patterns, length, character set, etc.
+    return True
 
 
 def get_local_config_trusted_dirs() -> list[str]:

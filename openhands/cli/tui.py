@@ -72,6 +72,10 @@ COMMANDS = {
     '/new': 'Create a new conversation',
     '/settings': 'Display and modify current settings',
     '/resume': 'Resume the agent when paused',
+    'snc --token <token>': 'Login to Snowcell with authentication token',
+    'snc --chat': 'Start chat session with AI assistant',
+    'snc --logout': 'Logout from Snowcell',
+    'snc --status': 'Show Snowcell authentication status',
 }
 
 print_lock = threading.Lock()
@@ -135,19 +139,38 @@ def display_initialization_animation(text: str, is_loaded: asyncio.Event) -> Non
 
 
 def display_banner(session_id: str) -> None:
-    print_formatted_text(
-        HTML(r"""<gold>
+    import os
+
+    # Check if we're running with Snowcell branding
+    if os.environ.get('SNOWCELL_BRANDING') == 'true':
+        print_formatted_text(
+            HTML(
+                r"""<gold>
+     ____                               _  _
+    / ___| _ __   _____      _____ ___ | || |
+    \___ \| '_ \ / _ \ \ /\ / / __/ _ \| || |
+     ___) | | | | (_) \ V  V / (_|  __/| || |
+    |____/|_| |_|\___/ \_/\_/ \___\___ |_||_|
+        </gold>"""
+            ),
+            style=DEFAULT_STYLE,
+        )
+        print_formatted_text(HTML(f'<grey>Snowcell AI Assistant v{__version__}</grey>'))
+    else:
+        print_formatted_text(
+            HTML(
+                r"""<gold>
      ___                    _   _                 _
     /  _ \ _ __   ___ _ __ | | | | __ _ _ __   __| |___
     | | | | '_ \ / _ \ '_ \| |_| |/ _` | '_ \ / _` / __|
     | |_| | |_) |  __/ | | |  _  | (_| | | | | (_| \__ \
     \___ /| .__/ \___|_| |_|_| |_|\__,_|_| |_|\__,_|___/
           |_|
-    </gold>"""),
-        style=DEFAULT_STYLE,
-    )
-
-    print_formatted_text(HTML(f'<grey>OpenHands CLI v{__version__}</grey>'))
+        </gold>"""
+            ),
+            style=DEFAULT_STYLE,
+        )
+        print_formatted_text(HTML(f'<grey>OpenHands CLI v{__version__}</grey>'))
 
     print_formatted_text('')
     print_formatted_text(HTML(f'<grey>Initialized conversation {session_id}</grey>'))
@@ -155,19 +178,37 @@ def display_banner(session_id: str) -> None:
 
 
 def display_welcome_message(message: str = '') -> None:
-    print_formatted_text(
-        HTML("<gold>Let's start building!</gold>\n"), style=DEFAULT_STYLE
-    )
-    if message:
+    import os
+
+    if os.environ.get('SNOWCELL_BRANDING') == 'true':
         print_formatted_text(
-            HTML(f'{message} <grey>Type /help for help</grey>'),
+            HTML("<gold>Welcome to Snowcell AI Assistant!</gold>\n"),
             style=DEFAULT_STYLE,
         )
+        if message:
+            print_formatted_text(
+                HTML(f'{message} <grey>Type /help for help</grey>'),
+                style=DEFAULT_STYLE,
+            )
+        else:
+            print_formatted_text(
+                HTML('How can I assist you today? <grey>Type /help for help</grey>'),
+                style=DEFAULT_STYLE,
+            )
     else:
         print_formatted_text(
-            HTML('What do you want to build? <grey>Type /help for help</grey>'),
-            style=DEFAULT_STYLE,
+            HTML("<gold>Let's start building!</gold>\n"), style=DEFAULT_STYLE
         )
+        if message:
+            print_formatted_text(
+                HTML(f'{message} <grey>Type /help for help</grey>'),
+                style=DEFAULT_STYLE,
+            )
+        else:
+            print_formatted_text(
+                HTML('What do you want to build? <grey>Type /help for help</grey>'),
+                style=DEFAULT_STYLE,
+            )
 
 
 def display_initial_user_prompt(prompt: str) -> None:
@@ -346,13 +387,41 @@ def update_streaming_output(text: str):
 
 # Interactive command output display functions
 def display_help() -> None:
-    # Version header and introduction
-    print_formatted_text(
-        HTML(
-            f'\n<grey>OpenHands CLI v{__version__}</grey>\n'
-            '<gold>OpenHands CLI lets you interact with the OpenHands agent from the command line.</gold>\n'
+    import os
+
+    # Check if we're running with Snowcell branding
+    if os.environ.get('SNOWCELL_BRANDING') == 'true':
+        # Version header and introduction for Snowcell
+        print_formatted_text(
+            HTML(
+                f'\n<grey>Snowcell AI Assistant v{__version__}</grey>\n'
+                '<gold>Snowcell AI Assistant - Your intelligent coding companion</gold>\n'
+            )
         )
-    )
+    else:
+        # Version header and introduction for OpenHands
+        print_formatted_text(
+            HTML(
+                f'\n<grey>OpenHands CLI v{__version__}</grey>\n'
+                '<gold>OpenHands CLI lets you interact with the OpenHands agent from the command line.</gold>\n'
+            )
+        )
+
+        # Snowcell Authentication section (only show for non-Snowcell branded sessions)
+        print_formatted_text(HTML('<gold>Snowcell Authentication (Required):</gold>'))
+        print_formatted_text(
+            HTML(
+                '• <gold><b>snc --token &lt;token&gt;</b></gold> - Login with your Snowcell authentication token\n'
+                '• <gold><b>snc --status</b></gold> - Check your current authentication status\n'
+                '• <gold><b>snc --chat</b></gold> - Start chat session with AI assistant\n'
+                '• <gold><b>snc --logout</b></gold> - Logout and clear your authentication\n'
+            )
+        )
+        print_formatted_text(
+            HTML(
+                '<grey>⚠ Note: You must be authenticated with Snowcell to use the AI assistant.</grey>\n'
+            )
+        )
 
     # Usage examples
     print_formatted_text('Things that you can try:')
@@ -378,7 +447,10 @@ def display_help() -> None:
     print_formatted_text(HTML('Interactive commands:'))
     commands_html = ''
     for command, description in COMMANDS.items():
-        commands_html += f'<gold><b>{command}</b></gold> - <grey>{description}</grey>\n'
+        if not command.startswith('snc'):  # Skip SNC commands as they're shown above
+            commands_html += (
+                f'<gold><b>{command}</b></gold> - <grey>{description}</grey>\n'
+            )
     print_formatted_text(HTML(commands_html))
 
     # Footer
@@ -514,6 +586,23 @@ class CommandCompleter(Completer):
                 available_commands.pop('/resume', None)
 
             for command, description in available_commands.items():
+                if command.startswith(text) and not command.startswith('snc'):
+                    yield Completion(
+                        command,
+                        start_position=-len(text),
+                        display_meta=description,
+                        style='bg:ansidarkgray fg:gold',
+                    )
+        elif text.startswith('snc'):
+            # Handle Snowcell command completions
+            snc_commands = [
+                ('snc --token ', 'Login with authentication token'),
+                ('snc --status', 'Check authentication status'),
+                ('snc --chat', 'Start chat session with AI assistant'),
+                ('snc --logout', 'Logout from Snowcell'),
+            ]
+
+            for command, description in snc_commands:
                 if command.startswith(text):
                     yield Completion(
                         command,
@@ -735,3 +824,98 @@ class UserCancelledError(Exception):
     """Raised when the user cancels an operation via key binding."""
 
     pass
+
+
+# Snowcell Authentication display functions
+def display_snc_login_success() -> None:
+    """Display successful Snowcell login message."""
+    print_formatted_text('')
+    print_formatted_text(
+        HTML('<gold>✓ Successfully authenticated with Snowcell</gold>')
+    )
+    print_formatted_text('')
+
+
+def display_snc_login_error() -> None:
+    """Display Snowcell login error message."""
+    print_formatted_text('')
+    print_formatted_text(
+        HTML(
+            '<ansired>✗ Authentication failed. Please check your Snowcell token.</ansired>'
+        )
+    )
+    print_formatted_text('')
+
+
+def display_snc_logout_success() -> None:
+    """Display successful Snowcell logout message."""
+    print_formatted_text('')
+    print_formatted_text(HTML('<gold>✓ Successfully logged out from Snowcell</gold>'))
+    print_formatted_text('')
+
+
+def display_snc_status(auth_info: dict) -> None:
+    """Display Snowcell authentication status."""
+    print_formatted_text('')
+
+    if auth_info['authenticated']:
+        expires_in_hours = auth_info['expires_in'] / 3600
+        status_text = f"""Snowcell Authentication Status:
+
+   Status:        Authenticated ✓
+   Expires in:    {expires_in_hours:.1f} hours
+
+   You can now chat with the AI assistant."""
+
+        container = Frame(
+            TextArea(
+                text=status_text,
+                read_only=True,
+                style='ansigreen',
+                wrap_lines=True,
+            ),
+            title='Snowcell Status',
+            style='ansigreen',
+        )
+    else:
+        status_text = """Snowcell Authentication Status:
+
+   Status:        Not authenticated ✗
+
+   Please login with: snc --token <your-token>
+
+   After login, you'll automatically enter the chat interface."""
+
+        container = Frame(
+            TextArea(
+                text=status_text,
+                read_only=True,
+                style='ansired',
+                wrap_lines=True,
+            ),
+            title='Snowcell Status',
+            style='ansired',
+        )
+
+    print_container(container)
+    print_formatted_text('')
+
+
+def display_snc_authentication_required() -> None:
+    """Display message when Snowcell authentication is required."""
+    print_formatted_text('')
+    print_formatted_text(HTML('<ansired>⚠ Snowcell authentication required</ansired>'))
+    print_formatted_text(
+        HTML('<grey>Please login with: snc --token &lt;your-token&gt;</grey>')
+    )
+    print_formatted_text('')
+
+
+def display_snc_token_expired() -> None:
+    """Display message when Snowcell token has expired."""
+    print_formatted_text('')
+    print_formatted_text(HTML('<ansired>⚠ Snowcell token has expired</ansired>'))
+    print_formatted_text(
+        HTML('<grey>Please login again with: snc --token &lt;your-token&gt;</grey>')
+    )
+    print_formatted_text('')
