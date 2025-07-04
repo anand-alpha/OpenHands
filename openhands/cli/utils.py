@@ -48,12 +48,8 @@ def verify_snc_token() -> bool:
         with open(_SNC_AUTH_FILE_PATH, 'r') as f:
             auth_data = json.load(f)
 
-        # Check if token is active and not expired (24 hours)
-        if auth_data.get('status') == 'active':
-            token_age = time.time() - auth_data.get('timestamp', 0)
-            return token_age < 86400  # 24 hours in seconds
-
-        return False
+        # Check if token is active (no expiration)
+        return auth_data.get('status') == 'active'
     except Exception:
         return False
 
@@ -72,14 +68,13 @@ def get_snc_auth_info() -> dict:
             auth_data = json.load(f)
 
         token_age = time.time() - auth_data.get('timestamp', 0)
-        expires_in = 86400 - token_age  # 24 hours in seconds
-        authenticated = auth_data.get('status') == 'active' and expires_in > 0
+        authenticated = auth_data.get('status') == 'active'
 
         return {
             'authenticated': authenticated,
             'token_age': token_age,
-            'expires_in': max(0, expires_in),
-            'reason': 'Token expired' if expires_in <= 0 else None,
+            'expires_in': None,  # Token never expires
+            'reason': None if authenticated else 'Invalid token status',
         }
     except Exception:
         return {

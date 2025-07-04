@@ -120,9 +120,9 @@ def process_instance(
     """
     # Setup the logger properly, so you can run multi-processing to parallelize the evaluation
     if reset_logger:
-        assert log_dir is not None, (
-            "Can't reset logger without a provided log directory."
-        )
+        assert (
+            log_dir is not None
+        ), "Can't reset logger without a provided log directory."
         os.makedirs(log_dir, exist_ok=True)
         reset_logger_for_multiprocessing(logger, instance.instance_id, log_dir)
     else:
@@ -365,9 +365,9 @@ if __name__ == '__main__':
                 for line in tqdm(f, desc='Loading predictions')
             ]
         )
-    assert 'instance_id' in predictions.columns, (
-        'Input file must contain instance_id column.'
-    )
+    assert (
+        'instance_id' in predictions.columns
+    ), 'Input file must contain instance_id column.'
 
     if 'model_patch' not in predictions.columns and (
         'test_result' in predictions.columns
@@ -376,17 +376,17 @@ if __name__ == '__main__':
         raise ValueError(
             'Input file must contain model_patch column OR test_result column with model_patch field.'
         )
-    assert len(predictions['instance_id'].unique()) == len(predictions), (
-        'instance_id column must be unique.'
-    )
+    assert len(predictions['instance_id'].unique()) == len(
+        predictions
+    ), 'instance_id column must be unique.'
 
     if 'model_patch' not in predictions.columns:
         predictions['model_patch'] = predictions['test_result'].apply(
             lambda x: x.get('git_patch', '')
         )
-    assert {'instance_id', 'model_patch'}.issubset(set(predictions.columns)), (
-        'Input file must contain instance_id and model_patch columns.'
-    )
+    assert {'instance_id', 'model_patch'}.issubset(
+        set(predictions.columns)
+    ), 'Input file must contain instance_id and model_patch columns.'
 
     # Process model_patch
     predictions['model_patch'] = predictions['model_patch'].apply(process_git_patch)
@@ -418,9 +418,18 @@ if __name__ == '__main__':
                 args.input_file
             ),  # Use input file dir as output dir
             start_time=time.strftime('%Y-%m-%d %H:%M:%S'),  # Current time
-            git_commit=subprocess.check_output(['git', 'rev-parse', 'HEAD'], stderr=subprocess.DEVNULL)
-            .decode('utf-8')
-            .strip() if subprocess.run(['git', 'rev-parse', 'HEAD'], capture_output=True).returncode == 0 else 'unknown',  # Current commit
+            git_commit=(
+                subprocess.check_output(
+                    ['git', 'rev-parse', 'HEAD'], stderr=subprocess.DEVNULL
+                )
+                .decode('utf-8')
+                .strip()
+                if subprocess.run(
+                    ['git', 'rev-parse', 'HEAD'], capture_output=True
+                ).returncode
+                == 0
+                else 'unknown'
+            ),  # Current commit
             dataset=args.dataset,  # Dataset name from args
         )
 

@@ -192,13 +192,11 @@ def make_metadata(
     # Get git commit hash safely
     try:
         git_commit = subprocess.check_output(
-            ['git', 'rev-parse', 'HEAD'],
-            stderr=subprocess.DEVNULL,
-            text=True
+            ['git', 'rev-parse', 'HEAD'], stderr=subprocess.DEVNULL, text=True
         ).strip()
     except (subprocess.CalledProcessError, FileNotFoundError):
         git_commit = 'unknown'
-    
+
     metadata = EvalMetadata(
         agent_class=agent_class,
         llm_config=llm_config,
@@ -210,9 +208,9 @@ def make_metadata(
         dataset=dataset_name,
         data_split=data_split,
         details=details,
-        condenser_config=condenser_config
-        if condenser_config
-        else NoOpCondenserConfig(),
+        condenser_config=(
+            condenser_config if condenser_config else NoOpCondenserConfig()
+        ),
     )
     metadata_json = metadata.model_dump_json()
     logger.info(f'Metadata: {metadata_json}')
@@ -229,9 +227,9 @@ def prepare_dataset(
     eval_ids: list[str] | None = None,
     skip_num: int | None = None,
 ):
-    assert 'instance_id' in dataset.columns, (
-        "Expected 'instance_id' column in the dataset. You should define your own unique identifier for each instance and use it as the 'instance_id' column."
-    )
+    assert (
+        'instance_id' in dataset.columns
+    ), "Expected 'instance_id' column in the dataset. You should define your own unique identifier for each instance and use it as the 'instance_id' column."
     id_column = 'instance_id'
     logger.info(f'Writing evaluation output to {output_file}')
     finished_ids: set[str] = set()

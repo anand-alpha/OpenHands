@@ -227,7 +227,7 @@ def main() -> None:
 
         # Clear terminal and show banner
         clear()
-        display_snowcode_banner()
+        # display_snowcode_banner()
 
         # If no arguments provided, show help
         if not any([args.token, args.status, args.logout, args.chat]):
