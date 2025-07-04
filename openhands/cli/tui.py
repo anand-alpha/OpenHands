@@ -141,31 +141,31 @@ def display_initialization_animation(text: str, is_loaded: asyncio.Event) -> Non
 def display_banner(session_id: str) -> None:
     import os
 
-    # Check if we're running with Snowcell branding
-    if os.environ.get('SNOWCELL_BRANDING') == 'true':
+    # Check if we're running with Snowcode branding
+    if os.environ.get('SNOWCODE_BRANDING') == 'true':
         print_formatted_text(
             HTML(
                 r"""<gold>
-     ____                               _  _
-    / ___| _ __   _____      _____ ___ | || |
-    \___ \| '_ \ / _ \ \ /\ / / __/ _ \| || |
-     ___) | | | | (_) \ V  V / (_|  __/| || |
-    |____/|_| |_|\___/ \_/\_/ \___\___ |_||_|
+     ____                                   _
+    / ___| _ __   _____      _____ ___   __| | ___
+    \___ \| '_ \ / _ \ \ /\ / / __/ _ \ / _  |/ _ \
+     ___) | | | | (_) \ V  V / (_| (_) | (_| |  __/
+    |____/|_| |_|\___/ \_/\_/ \___\___/ \____|\___/
         </gold>"""
             ),
             style=DEFAULT_STYLE,
         )
-        print_formatted_text(HTML(f'<grey>Snowcell AI Assistant v{__version__}</grey>'))
+        print_formatted_text(HTML(f'<grey>Snowcode AI Assistant v{__version__}</grey>'))
     else:
         print_formatted_text(
             HTML(
                 r"""<gold>
-     ___                    _   _                 _
-    /  _ \ _ __   ___ _ __ | | | | __ _ _ __   __| |___
-    | | | | '_ \ / _ \ '_ \| |_| |/ _` | '_ \ / _` / __|
-    | |_| | |_) |  __/ | | |  _  | (_| | | | | (_| \__ \
-    \___ /| .__/ \___|_| |_|_| |_|\__,_|_| |_|\__,_|___/
-          |_|
+     ____                                   _
+    / ___| _ __   _____      _____ ___   __| | ___
+    \___ \| '_ \ / _ \ \ /\ / / __/ _ \ / _  |/ _ \
+     ___) | | | | (_) \ V  V / (_| (_) | (_| |  __/
+    |____/|_| |_|\___/ \_/\_/ \___\___/ \____|\___/
+          
         </gold>"""
             ),
             style=DEFAULT_STYLE,
@@ -180,9 +180,9 @@ def display_banner(session_id: str) -> None:
 def display_welcome_message(message: str = '') -> None:
     import os
 
-    if os.environ.get('SNOWCELL_BRANDING') == 'true':
+    if os.environ.get('SNOWCODE_BRANDING') == 'true':
         print_formatted_text(
-            HTML("<gold>Welcome to Snowcell AI Assistant!</gold>\n"),
+            HTML("<gold>Welcome to Snowcode AI Assistant!</gold>\n"),
             style=DEFAULT_STYLE,
         )
         if message:
@@ -389,13 +389,13 @@ def update_streaming_output(text: str):
 def display_help() -> None:
     import os
 
-    # Check if we're running with Snowcell branding
-    if os.environ.get('SNOWCELL_BRANDING') == 'true':
-        # Version header and introduction for Snowcell
+    # Check if we're running with Snowcode branding
+    if os.environ.get('SNOWCODE_BRANDING') == 'true':
+        # Version header and introduction for Snowcode
         print_formatted_text(
             HTML(
-                f'\n<grey>Snowcell AI Assistant v{__version__}</grey>\n'
-                '<gold>Snowcell AI Assistant - Your intelligent coding companion</gold>\n'
+                f'\n<grey>Snowcode AI Assistant v{__version__}</grey>\n'
+                '<gold>Snowcode AI Assistant - Your intelligent coding companion</gold>\n'
             )
         )
     else:

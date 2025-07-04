@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Snowcell AI Assistant CLI
-A company-specific AI assistant that uses OpenHands backend with Snowcell branding.
+Snowcode AI Assistant CLI
+A company-specific AI assistant that uses OpenHands backend with Snowcode branding.
 """
 
 import sys
@@ -22,29 +22,23 @@ from openhands.cli.utils import (
 )
 
 
-def display_snowcell_banner() -> None:
-    """Display the Snowcell company banner."""
+def display_snowcode_banner() -> None:
+    """Display the Snowcode company banner."""
     print_formatted_text(
         HTML(
             r"""<gold>
-     ____                               _  _
-    / ___| _ __   _____      _____ ___ | || |
-    \___ \| '_ \ / _ \ \ /\ / / __/ _ \| || |
-     ___) | | | | (_) \ V  V / (_|  __/| || |
-    |____/|_| |_|\___/ \_/\_/ \___\___/|_||_|
+     ____                                   _
+    / ___| _ __   _____      _____ ___   __| | ___
+    \___ \| '_ \ / _ \ \ /\ / / __/ _ \ / _  |/ _ \
+     ___) | | | | (_) \ V  V / (_| (_) | (_| |  __/
+    |____/|_| |_|\___/ \_/\_/ \___\___/ \__,_|\___/
 
-    Snowcell AI Assistant
+    Snowcode AI Assistant
     </gold>"""
         )
     )
-    print_formatted_text('')
-    print_formatted_text(HTML('<grey>Your intelligent AI-powered assistant</grey>'))
-    print_formatted_text('')
-
-
-def display_snowcell_help() -> None:
-    """Display Snowcell help information."""
-    print_formatted_text(HTML('<gold>Snowcell AI Assistant Commands:</gold>'))
+def display_snowcode_help() -> None:
+    """Display Snowcode help information."""
     print_formatted_text('')
     print_formatted_text(
         HTML(
@@ -73,7 +67,7 @@ def display_login_success() -> None:
     """Display successful login message."""
     print_formatted_text('')
     print_formatted_text(
-        HTML('<ansigreen>✓ Successfully authenticated with Snowcell!</ansigreen>')
+        HTML('<ansigreen>✓ Successfully authenticated with Snowcode!</ansigreen>')
     )
     print_formatted_text('')
 
@@ -90,10 +84,10 @@ def display_logout_success() -> None:
     """Display successful logout message."""
     print_formatted_text('')
     print_formatted_text(
-        HTML('<ansigreen>✓ Successfully logged out from Snowcell</ansigreen>')
+        HTML('<ansigreen>✓ Successfully logged out from Snowcode</ansigreen>')
     )
     print_formatted_text(
-        HTML('<grey>Thank you for using Snowcell AI Assistant!</grey>')
+        HTML('<grey>Thank you for using Snowcode AI Assistant!</grey>')
     )
     print_formatted_text('')
 
@@ -101,7 +95,7 @@ def display_logout_success() -> None:
 def display_status(auth_info: dict) -> None:
     """Display authentication status."""
     print_formatted_text('')
-    print_formatted_text(HTML('<gold>Snowcell Authentication Status:</gold>'))
+    print_formatted_text(HTML('<gold>Snowcode Authentication Status:</gold>'))
     print_formatted_text('')
 
     if auth_info['authenticated']:
@@ -120,13 +114,13 @@ def display_status(auth_info: dict) -> None:
 def launch_openhands_chat() -> NoReturn:
     """Launch the actual OpenHands AI assistant chat interface."""
     print_formatted_text('')
-    print_formatted_text(HTML('<gold>🚀 Starting Snowcell AI Assistant...</gold>'))
+    print_formatted_text(HTML('<gold>🚀 Starting Snowcode AI Assistant...</gold>'))
     print_formatted_text('')
 
-    # Set environment variable to indicate Snowcell branding
+    # Set environment variable to indicate Snowcode branding
     import os
 
-    os.environ['SNOWCELL_BRANDING'] = 'true'
+    os.environ['SNOWCODE_BRANDING'] = 'true'
 
     # Clear command line arguments to prevent conflicts
     original_argv = sys.argv.copy()
@@ -141,8 +135,8 @@ def launch_openhands_chat() -> NoReturn:
         # Restore original argv in case of any issues
         sys.argv = original_argv
         # Clean up environment variable
-        if 'SNOWCELL_BRANDING' in os.environ:
-            del os.environ['SNOWCELL_BRANDING']
+        if 'SNOWCODE_BRANDING' in os.environ:
+            del os.environ['SNOWCODE_BRANDING']
 
     sys.exit(0)
 
@@ -191,7 +185,7 @@ def handle_status_command() -> None:
 def parse_arguments() -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
-        description='Snowcell AI Assistant - Intelligent chat interface',
+        description='Snowcode AI Assistant - Intelligent chat interface',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         add_help=False,  # Disable default help to handle it ourselves
         epilog='''
@@ -207,7 +201,7 @@ Examples:
     group.add_argument(
         '--token',
         type=str,
-        help='Login with Snowcell authentication token and start chat',
+        help='Login with Snowcode authentication token and start chat',
     )
     group.add_argument(
         '--status', action='store_true', help='Check authentication status'
@@ -225,29 +219,29 @@ Examples:
 
 
 def main() -> None:
-    """Main entry point for Snowcell CLI."""
+    """Main entry point for Snowcode CLI."""
     try:
         args = parse_arguments()
 
         # Clear terminal and show banner
         clear()
-        display_snowcell_banner()
+        # display_snowcode_banner()
 
         # If no arguments provided, show help
         if not any([args.token, args.status, args.logout, args.chat]):
-            display_snowcell_help()
+            display_snowcode_help()
             return
 
         # Handle commands
         if args.token:
-            print_formatted_text(HTML(f'<grey>Authenticating with Snowcell...</grey>'))
+            print_formatted_text(HTML(f'<grey>Authenticating with Snowcode...</grey>'))
             print_formatted_text('')
 
             if handle_login_command(args.token):
                 # After successful login, automatically start chat
                 print_formatted_text('')
                 print_formatted_text(
-                    HTML('<gold>🎉 Welcome to Snowcell AI Assistant!</gold>')
+                    HTML('<gold>🎉 Welcome to Snowcode AI Assistant!</gold>')
                 )
                 print_formatted_text(HTML('<grey>Starting AI chat interface...</grey>'))
                 launch_openhands_chat()
@@ -269,7 +263,7 @@ def main() -> None:
             if verify_snc_token():
                 print_formatted_text('')
                 print_formatted_text(
-                    HTML('<gold>🎉 Welcome to Snowcell AI Assistant!</gold>')
+                    HTML('<gold>🎉 Welcome to Snowcode AI Assistant!</gold>')
                 )
                 print_formatted_text(HTML('<grey>Starting AI chat interface...</grey>'))
                 launch_openhands_chat()
