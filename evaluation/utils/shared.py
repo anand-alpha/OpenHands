@@ -189,6 +189,16 @@ def make_metadata(
     )
     logger.info(f'Using evaluation output directory: {eval_output_path}')
 
+    # Get git commit hash safely
+    try:
+        git_commit = subprocess.check_output(
+            ['git', 'rev-parse', 'HEAD'],
+            stderr=subprocess.DEVNULL,
+            text=True
+        ).strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        git_commit = 'unknown'
+    
     metadata = EvalMetadata(
         agent_class=agent_class,
         llm_config=llm_config,
@@ -196,9 +206,7 @@ def make_metadata(
         max_iterations=max_iterations,
         eval_output_dir=eval_output_path,
         start_time=time.strftime('%Y-%m-%d %H:%M:%S'),
-        git_commit=subprocess.check_output(['git', 'rev-parse', 'HEAD'])
-        .decode('utf-8')
-        .strip(),
+        git_commit=git_commit,
         dataset=dataset_name,
         data_split=data_split,
         details=details,

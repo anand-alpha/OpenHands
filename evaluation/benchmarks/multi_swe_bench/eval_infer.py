@@ -418,9 +418,9 @@ if __name__ == '__main__':
                 args.input_file
             ),  # Use input file dir as output dir
             start_time=time.strftime('%Y-%m-%d %H:%M:%S'),  # Current time
-            git_commit=subprocess.check_output(['git', 'rev-parse', 'HEAD'])
+            git_commit=subprocess.check_output(['git', 'rev-parse', 'HEAD'], stderr=subprocess.DEVNULL)
             .decode('utf-8')
-            .strip(),  # Current commit
+            .strip() if subprocess.run(['git', 'rev-parse', 'HEAD'], capture_output=True).returncode == 0 else 'unknown',  # Current commit
             dataset=args.dataset,  # Dataset name from args
         )
 
