@@ -71,7 +71,7 @@ class GitHandler:
         Returns:
             bool: True if the reference exists, otherwise False.
         """
-        cmd = f'git --no-pager rev-parse --verify {ref}'
+        cmd = f'git --no-pager rev-parse --verify {ref} 2>/dev/null'
         output = self.execute(cmd, self.cwd)
         return output.exit_code == 0
 
