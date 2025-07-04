@@ -136,10 +136,13 @@ class GitHandler:
         Retrieves the currently selected Git branch.
 
         Returns:
-            str: The name of the current branch.
+            str: The name of the current branch, or 'main' if HEAD doesn't exist.
         """
-        cmd = 'git --no-pager rev-parse --abbrev-ref HEAD'
+        cmd = 'git --no-pager rev-parse --abbrev-ref HEAD 2>/dev/null'
         output = self.execute(cmd, self.cwd)
+        if output.exit_code != 0:
+            # Handle case where HEAD doesn't exist (e.g., fresh repo with no commits)
+            return 'main'
         return output.content.strip()
 
     def _get_changed_files(self) -> list[str]:
