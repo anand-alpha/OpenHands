@@ -39,6 +39,7 @@ def store_snc_token(token: str) -> bool:
         return False
 
 
+
 def verify_snc_token() -> bool:
     """Verify if user is authenticated with SNC."""
     try:
