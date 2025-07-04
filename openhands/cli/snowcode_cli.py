@@ -106,10 +106,7 @@ def display_status(auth_info: dict) -> None:
 
     if auth_info['authenticated']:
         print_formatted_text(HTML('<ansigreen>Status: Authenticated ✓</ansigreen>'))
-        expires_in = auth_info.get('expires_in', 0)
-        hours = int(expires_in // 3600)
-        minutes = int((expires_in % 3600) // 60)
-        print_formatted_text(HTML(f'<grey>Time remaining: {hours}h {minutes}m</grey>'))
+        print_formatted_text(HTML('<grey>Session: Permanent (no expiration)</grey>'))
     else:
         print_formatted_text(HTML('<ansired>Status: Not authenticated ✗</ansired>'))
         if auth_info.get('reason'):
