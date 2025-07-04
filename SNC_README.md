@@ -121,7 +121,6 @@ snc --status
 ```bash
 snc --chat
 ```
-
 ### `snc --logout`
 
 **Purpose**: End session and clear authentication
