@@ -148,9 +148,9 @@ def display_banner(session_id: str) -> None:
                 r"""<gold>
      ____                                   _
     / ___| _ __   _____      _____ ___   __| | ___
-    \___ \| '_ \ / _ \ \ /\ / / __/ _ \ / _  |/ _ \
+    \___ \| '_ \ / _ \ \ /\ / / __/ _ \ / _` |/ _ \
      ___) | | | | (_) \ V  V / (_| (_) | (_| |  __/
-    |____/|_| |_|\___/ \_/\_/ \___\___/ \____|\___/
+    |____/|_| |_|\___/ \_/\_/ \___\___/ \__,_|\___|
         </gold>"""
             ),
             style=DEFAULT_STYLE,
@@ -160,12 +160,12 @@ def display_banner(session_id: str) -> None:
         print_formatted_text(
             HTML(
                 r"""<gold>
-     ____                                   _
-    / ___| _ __   _____      _____ ___   __| | ___
-    \___ \| '_ \ / _ \ \ /\ / / __/ _ \ / _  |/ _ \
-     ___) | | | | (_) \ V  V / (_| (_) | (_| |  __/
-    |____/|_| |_|\___/ \_/\_/ \___\___/ \____|\___/
-          
+     ___                    _   _                 _
+    /  _ \ _ __   ___ _ __ | | | | __ _ _ __   __| |___
+    | | | | '_ \ / _ \ '_ \| |_| |/ _` | '_ \ / _` / __|
+    | |_| | |_) |  __/ | | |  _  | (_| | | | | (_| \__ \
+    \___ /| .__/ \___|_| |_|_| |_|\__,_|_| |_|\__,_|___/
+          |_|
         </gold>"""
             ),
             style=DEFAULT_STYLE,
@@ -192,7 +192,7 @@ def display_welcome_message(message: str = '') -> None:
             )
         else:
             print_formatted_text(
-                HTML('How can I assist you today? <grey>Type /help for help</grey>'),
+                HTML('What can I help you with? <grey>Type /help for help</grey>'),
                 style=DEFAULT_STYLE,
             )
     else:

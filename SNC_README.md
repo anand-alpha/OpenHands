@@ -238,7 +238,7 @@ Thank you for using Snowcell AI Assistant!
 ```
 openhands/
 ├── cli/
-│   ├── snowcell_cli.py     # Main Snowcell CLI entry point
+│   ├── snowcode_cli.py     # Main Snowcell CLI entry point
 │   ├── tui.py              # Modified for Snowcell branding
 │   ├── utils.py            # Authentication utilities
 │   └── main.py             # OpenHands main CLI (unchanged)
@@ -247,7 +247,7 @@ openhands/
 
 ### Key Components
 
-#### 1. Main CLI (`snowcell_cli.py`)
+#### 1. Main CLI (`snowcode_cli.py`)
 
 - **Purpose**: Snowcell-branded authentication wrapper
 - **Functions**:
@@ -294,7 +294,7 @@ openhands = "openhands.cli.main:main"
 ### Branding Mechanism
 
 ```python
-# In snowcell_cli.py
+# In snowcode_cli.py
 os.environ['SNOWCELL_BRANDING'] = 'true'
 
 # In tui.py

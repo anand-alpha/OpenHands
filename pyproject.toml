@@ -5,10 +5,10 @@ requires = [
 ]
 
 [tool.poetry]
-name = "openhands-ai"
+name = "snowcode"
 version = "0.48.0"
-description = "OpenHands: Code Less, Make More"
-authors = [ "OpenHands" ]
+description = "Snowcode: Code Less, Make More"
+authors = [ "Snowcode" ]
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/All-Hands-AI/OpenHands"
@@ -162,7 +162,6 @@ swebench = { git = "https://github.com/ryanhoangt/SWE-bench.git", rev = "fix-mod
 
 [tool.poetry.scripts]
 snc = "openhands.cli.snowcode_cli:main"
-openhands = "openhands.cli.main:main"
 
 [tool.poetry.group.testgeneval.dependencies]
 fuzzywuzzy = "^0.18.0"

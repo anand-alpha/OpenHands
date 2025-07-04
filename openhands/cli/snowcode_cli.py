@@ -29,16 +29,22 @@ def display_snowcode_banner() -> None:
             r"""<gold>
      ____                                   _
     / ___| _ __   _____      _____ ___   __| | ___
-    \___ \| '_ \ / _ \ \ /\ / / __/ _ \ / _  |/ _ \
+    \___ \| '_ \ / _ \ \ /\ / / __/ _ \ / _` |/ _ \
      ___) | | | | (_) \ V  V / (_| (_) | (_| |  __/
-    |____/|_| |_|\___/ \_/\_/ \___\___/ \__,_|\___/
+    |____/|_| |_|\___/ \_/\_/ \___\___/ \__,_|\___|
 
     Snowcode AI Assistant
     </gold>"""
         )
     )
+    print_formatted_text('')
+    print_formatted_text(HTML('<grey>Your intelligent AI-powered assistant</grey>'))
+    print_formatted_text('')
+
+
 def display_snowcode_help() -> None:
     """Display Snowcode help information."""
+    print_formatted_text(HTML('<gold>Snowcode AI Assistant Commands:</gold>'))
     print_formatted_text('')
     print_formatted_text(
         HTML(
@@ -113,10 +119,6 @@ def display_status(auth_info: dict) -> None:
 
 def launch_openhands_chat() -> NoReturn:
     """Launch the actual OpenHands AI assistant chat interface."""
-    print_formatted_text('')
-    print_formatted_text(HTML('<gold>🚀 Starting Snowcode AI Assistant...</gold>'))
-    print_formatted_text('')
-
     # Set environment variable to indicate Snowcode branding
     import os
 
@@ -225,7 +227,7 @@ def main() -> None:
 
         # Clear terminal and show banner
         clear()
-        # display_snowcode_banner()
+        display_snowcode_banner()
 
         # If no arguments provided, show help
         if not any([args.token, args.status, args.logout, args.chat]):
@@ -265,7 +267,6 @@ def main() -> None:
                 print_formatted_text(
                     HTML('<gold>🎉 Welcome to Snowcode AI Assistant!</gold>')
                 )
-                print_formatted_text(HTML('<grey>Starting AI chat interface...</grey>'))
                 launch_openhands_chat()
             else:
                 print_formatted_text('')
