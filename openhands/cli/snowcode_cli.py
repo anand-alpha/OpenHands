@@ -14,11 +14,11 @@ from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.shortcuts import clear
 
 from openhands.cli.utils import (
-    store_snc_token,
-    verify_snc_token,
-    get_snc_auth_info,
-    logout_snc,
-    validate_snc_token,
+    store_snow_token,
+    verify_snow_token,
+    get_snow_auth_info,
+    logout_snow,
+    validate_snow_token,
 )
 
 
@@ -48,17 +48,19 @@ def display_snowcode_help() -> None:
     print_formatted_text('')
     print_formatted_text(
         HTML(
-            '• <gold><b>snc --token &lt;token&gt;</b></gold> - Login and start AI assistant'
+            '• <gold><b>snow --token &lt;token&gt;</b></gold> - Login and start AI assistant'
         )
     )
     print_formatted_text(
-        HTML('• <gold><b>snc --status</b></gold> - Check your authentication status')
+        HTML('• <gold><b>snow --status</b></gold> - Check your authentication status')
     )
     print_formatted_text(
-        HTML('• <gold><b>snc --chat</b></gold> - Start chat session (if authenticated)')
+        HTML(
+            '• <gold><b>snow --chat</b></gold> - Start chat session (if authenticated)'
+        )
     )
     print_formatted_text(
-        HTML('• <gold><b>snc --logout</b></gold> - Logout and end session')
+        HTML('• <gold><b>snow --logout</b></gold> - Logout and end session')
     )
     print_formatted_text('')
     print_formatted_text(
@@ -145,19 +147,21 @@ def handle_login_command(token: str) -> bool:
     if not token:
         print_formatted_text('')
         print_formatted_text(HTML('<ansired>Error: Token is required</ansired>'))
-        print_formatted_text(HTML('<grey>Usage: snc --token &lt;your-token&gt;</grey>'))
+        print_formatted_text(
+            HTML('<grey>Usage: snow --token &lt;your-token&gt;</grey>')
+        )
         print_formatted_text('')
         return False
 
     # Validate token format
-    if not validate_snc_token(token):
+    if not validate_snow_token(token):
         print_formatted_text('')
         print_formatted_text(HTML('<ansired>Error: Invalid token format</ansired>'))
         print_formatted_text('')
         return False
 
     # Store the token
-    if store_snc_token(token):
+    if store_snow_token(token):
         display_login_success()
         return True
     else:
@@ -167,7 +171,7 @@ def handle_login_command(token: str) -> bool:
 
 def handle_logout_command() -> None:
     """Handle logout command."""
-    if logout_snc():
+    if logout_snow():
         display_logout_success()
     else:
         print_formatted_text('')
@@ -177,7 +181,7 @@ def handle_logout_command() -> None:
 
 def handle_status_command() -> None:
     """Handle status command."""
-    auth_info = get_snc_auth_info()
+    auth_info = get_snow_auth_info()
     display_status(auth_info)
 
 
@@ -189,10 +193,10 @@ def parse_arguments() -> argparse.Namespace:
         add_help=False,  # Disable default help to handle it ourselves
         epilog='''
 Examples:
-  snc --token abc123xyz789       Login with token and start chat
-  snc --status                   Check authentication status
-  snc --chat                     Start chat session (if authenticated)
-  snc --logout                   Logout
+  snow --token abc123xyz789       Login with token and start chat
+  snow --status                   Check authentication status
+  snow --chat                     Start chat session (if authenticated)
+  snow --logout                   Logout
         ''',
     )
 
@@ -249,17 +253,17 @@ def main() -> None:
             handle_status_command()
 
             # If authenticated, offer to start chat
-            if verify_snc_token():
+            if verify_snow_token():
                 print_formatted_text(
                     HTML(
-                        '<grey>Ready to chat! Use <gold>snc --chat</gold> to start the AI assistant.</grey>'
+                        '<grey>Ready to chat! Use <gold>snow --chat</gold> to start the AI assistant.</grey>'
                     )
                 )
                 print_formatted_text('')
 
         elif args.chat:
             # Check authentication before starting chat
-            if verify_snc_token():
+            if verify_snow_token():
                 print_formatted_text('')
                 print_formatted_text(
                     HTML('<gold>🎉 Welcome to Snowcode AI Assistant!</gold>')
@@ -272,7 +276,7 @@ def main() -> None:
                 )
                 print_formatted_text(
                     HTML(
-                        '<grey>Please login first: <gold>snc --token &lt;your-token&gt;</gold></grey>'
+                        '<grey>Please login first: <gold>snow --token &lt;your-token&gt;</gold></grey>'
                     )
                 )
                 print_formatted_text('')

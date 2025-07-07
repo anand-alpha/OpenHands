@@ -18,23 +18,23 @@ from openhands.cli.tui import (
     display_help,
     display_shutdown_message,
     display_status,
-    display_snc_login_success,
-    display_snc_login_error,
-    display_snc_logout_success,
-    display_snc_status,
-    display_snc_authentication_required,
-    display_snc_token_expired,
+    display_snow_login_success,
+    display_snow_login_error,
+    display_snow_logout_success,
+    display_snow_status,
+    display_snow_authentication_required,
+    display_snow_token_expired,
 )
 from openhands.cli.utils import (
     add_local_config_trusted_dir,
     get_local_config_trusted_dirs,
     read_file,
     write_to_file,
-    store_snc_token,
-    verify_snc_token,
-    get_snc_auth_info,
-    logout_snc,
-    validate_snc_token,
+    store_snow_token,
+    verify_snow_token,
+    get_snow_auth_info,
+    logout_snow,
+    validate_snow_token,
 )
 from openhands.core.config import (
     OpenHandsConfig,
@@ -50,14 +50,14 @@ from openhands.events.stream import EventStream
 from openhands.storage.settings.file_settings_store import FileSettingsStore
 
 
-def check_snc_authentication() -> bool:
-    """Check if user is authenticated with SNC."""
-    if not verify_snc_token():
-        auth_info = get_snc_auth_info()
+def check_snow_authentication() -> bool:
+    """Check if user is authenticated with snow."""
+    if not verify_snow_token():
+        auth_info = get_snow_auth_info()
         if auth_info['authenticated']:
-            display_snc_token_expired()
+            display_snow_token_expired()
         else:
-            display_snc_authentication_required()
+            display_snow_authentication_required()
         return False
     return True
 
@@ -76,16 +76,16 @@ async def handle_commands(
     new_session_requested = False
     exit_reason = ExitReason.ERROR
 
-    # Handle SNC authentication commands (these don't require authentication)
-    if command.startswith('snc --token '):
-        token = command[12:].strip()  # Extract token after 'snc --token '
-        handle_snc_login_command(token)
+    # Handle snow authentication commands (these don't require authentication)
+    if command.startswith('snow --token '):
+        token = command[12:].strip()  # Extract token after 'snow --token '
+        handle_snow_login_command(token)
         return close_repl, reload_microagents, new_session_requested, exit_reason
-    elif command == 'snc --logout':
-        handle_snc_logout_command()
+    elif command == 'snow --logout':
+        handle_snow_logout_command()
         return close_repl, reload_microagents, new_session_requested, exit_reason
-    elif command == 'snc --status':
-        handle_snc_status_command()
+    elif command == 'snow --status':
+        handle_snow_status_command()
         return close_repl, reload_microagents, new_session_requested, exit_reason
 
     # Handle general commands
@@ -102,7 +102,7 @@ async def handle_commands(
         handle_help_command()
     elif command == '/init':
         # Check authentication for init command
-        if not check_snc_authentication():
+        if not check_snow_authentication():
             return close_repl, reload_microagents, new_session_requested, exit_reason
         close_repl, reload_microagents = await handle_init_command(
             config, event_stream, current_dir
@@ -111,7 +111,7 @@ async def handle_commands(
         handle_status_command(usage_metrics, sid)
     elif command == '/new':
         # Check authentication for new command
-        if not check_snc_authentication():
+        if not check_snow_authentication():
             return close_repl, reload_microagents, new_session_requested, exit_reason
         close_repl, new_session_requested = handle_new_command(
             config, event_stream, usage_metrics, sid
@@ -122,12 +122,12 @@ async def handle_commands(
         await handle_settings_command(config, settings_store)
     elif command == '/resume':
         # Check authentication for resume command
-        if not check_snc_authentication():
+        if not check_snow_authentication():
             return close_repl, reload_microagents, new_session_requested, exit_reason
         close_repl, new_session_requested = await handle_resume_command(event_stream)
     else:
         # Check authentication for general messages/commands
-        if not check_snc_authentication():
+        if not check_snow_authentication():
             return close_repl, reload_microagents, new_session_requested, exit_reason
         close_repl = True
         action = MessageAction(content=command)
@@ -378,41 +378,41 @@ def check_folder_security_agreement(config: OpenHandsConfig, current_dir: str) -
     return True
 
 
-# SNC Authentication command handlers
-def handle_snc_login_command(token: str) -> None:
-    """Handle SNC login command."""
+# snow Authentication command handlers
+def handle_snow_login_command(token: str) -> None:
+    """Handle snow login command."""
     if not token:
         print_formatted_text('')
         print_formatted_text(HTML('<ansired>Error: Token is required</ansired>'))
-        print_formatted_text(HTML('<grey>Usage: snc --token &lt;your-token&gt;</grey>'))
+        print_formatted_text(HTML('<grey>Usage: snow --token &lt;your-token&gt;</grey>'))
         print_formatted_text('')
         return
 
     # Validate token format
-    if not validate_snc_token(token):
+    if not validate_snow_token(token):
         print_formatted_text('')
         print_formatted_text(HTML('<ansired>Error: Invalid token format</ansired>'))
         print_formatted_text('')
         return
 
     # Store the token
-    if store_snc_token(token):
-        display_snc_login_success()
+    if store_snow_token(token):
+        display_snow_login_success()
     else:
-        display_snc_login_error()
+        display_snow_login_error()
 
 
-def handle_snc_logout_command() -> None:
-    """Handle SNC logout command."""
-    if logout_snc():
-        display_snc_logout_success()
+def handle_snow_logout_command() -> None:
+    """Handle snow logout command."""
+    if logout_snow():
+        display_snow_logout_success()
     else:
         print_formatted_text('')
         print_formatted_text(HTML('<ansired>Error: Failed to logout</ansired>'))
         print_formatted_text('')
 
 
-def handle_snc_status_command() -> None:
-    """Handle SNC status command."""
-    auth_info = get_snc_auth_info()
-    display_snc_status(auth_info)
+def handle_snow_status_command() -> None:
+    """Handle snow status command."""
+    auth_info = get_snow_auth_info()
+    display_snow_status(auth_info)

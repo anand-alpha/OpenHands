@@ -72,10 +72,10 @@ COMMANDS = {
     '/new': 'Create a new conversation',
     '/settings': 'Display and modify current settings',
     '/resume': 'Resume the agent when paused',
-    'snc --token <token>': 'Login to Snowcell with authentication token',
-    'snc --chat': 'Start chat session with AI assistant',
-    'snc --logout': 'Logout from Snowcell',
-    'snc --status': 'Show Snowcell authentication status',
+    'snow --token <token>': 'Login to Snowcell with authentication token',
+    'snow --chat': 'Start chat session with AI assistant',
+    'snow --logout': 'Logout from Snowcell',
+    'snow --status': 'Show Snowcell authentication status',
 }
 
 print_lock = threading.Lock()
@@ -411,10 +411,10 @@ def display_help() -> None:
         print_formatted_text(HTML('<gold>Snowcell Authentication (Required):</gold>'))
         print_formatted_text(
             HTML(
-                '• <gold><b>snc --token &lt;token&gt;</b></gold> - Login with your Snowcell authentication token\n'
-                '• <gold><b>snc --status</b></gold> - Check your current authentication status\n'
-                '• <gold><b>snc --chat</b></gold> - Start chat session with AI assistant\n'
-                '• <gold><b>snc --logout</b></gold> - Logout and clear your authentication\n'
+                '• <gold><b>snow --token &lt;token&gt;</b></gold> - Login with your Snowcell authentication token\n'
+                '• <gold><b>snow --status</b></gold> - Check your current authentication status\n'
+                '• <gold><b>snow --chat</b></gold> - Start chat session with AI assistant\n'
+                '• <gold><b>snow --logout</b></gold> - Logout and clear your authentication\n'
             )
         )
         print_formatted_text(
@@ -447,7 +447,7 @@ def display_help() -> None:
     print_formatted_text(HTML('Interactive commands:'))
     commands_html = ''
     for command, description in COMMANDS.items():
-        if not command.startswith('snc'):  # Skip SNC commands as they're shown above
+        if not command.startswith('snow'):  # Skip snow commands as they're shown above
             commands_html += (
                 f'<gold><b>{command}</b></gold> - <grey>{description}</grey>\n'
             )
@@ -586,23 +586,23 @@ class CommandCompleter(Completer):
                 available_commands.pop('/resume', None)
 
             for command, description in available_commands.items():
-                if command.startswith(text) and not command.startswith('snc'):
+                if command.startswith(text) and not command.startswith('snow'):
                     yield Completion(
                         command,
                         start_position=-len(text),
                         display_meta=description,
                         style='bg:ansidarkgray fg:gold',
                     )
-        elif text.startswith('snc'):
+        elif text.startswith('snow'):
             # Handle Snowcell command completions
-            snc_commands = [
-                ('snc --token ', 'Login with authentication token'),
-                ('snc --status', 'Check authentication status'),
-                ('snc --chat', 'Start chat session with AI assistant'),
-                ('snc --logout', 'Logout from Snowcell'),
+            snow_commands = [
+                ('snow --token ', 'Login with authentication token'),
+                ('snow --status', 'Check authentication status'),
+                ('snow --chat', 'Start chat session with AI assistant'),
+                ('snow --logout', 'Logout from Snowcell'),
             ]
 
-            for command, description in snc_commands:
+            for command, description in snow_commands:
                 if command.startswith(text):
                     yield Completion(
                         command,
@@ -827,7 +827,7 @@ class UserCancelledError(Exception):
 
 
 # Snowcell Authentication display functions
-def display_snc_login_success() -> None:
+def display_snow_login_success() -> None:
     """Display successful Snowcell login message."""
     print_formatted_text('')
     print_formatted_text(
@@ -836,7 +836,7 @@ def display_snc_login_success() -> None:
     print_formatted_text('')
 
 
-def display_snc_login_error() -> None:
+def display_snow_login_error() -> None:
     """Display Snowcell login error message."""
     print_formatted_text('')
     print_formatted_text(
@@ -847,14 +847,14 @@ def display_snc_login_error() -> None:
     print_formatted_text('')
 
 
-def display_snc_logout_success() -> None:
+def display_snow_logout_success() -> None:
     """Display successful Snowcell logout message."""
     print_formatted_text('')
     print_formatted_text(HTML('<gold>✓ Successfully logged out from Snowcell</gold>'))
     print_formatted_text('')
 
 
-def display_snc_status(auth_info: dict) -> None:
+def display_snow_status(auth_info: dict) -> None:
     """Display Snowcell authentication status."""
     print_formatted_text('')
 
@@ -882,7 +882,7 @@ def display_snc_status(auth_info: dict) -> None:
 
    Status:        Not authenticated ✗
 
-   Please login with: snc --token <your-token>
+   Please login with: snow --token <your-token>
 
    After login, you'll automatically enter the chat interface."""
 
@@ -901,21 +901,21 @@ def display_snc_status(auth_info: dict) -> None:
     print_formatted_text('')
 
 
-def display_snc_authentication_required() -> None:
+def display_snow_authentication_required() -> None:
     """Display message when Snowcell authentication is required."""
     print_formatted_text('')
     print_formatted_text(HTML('<ansired>⚠ Snowcell authentication required</ansired>'))
     print_formatted_text(
-        HTML('<grey>Please login with: snc --token &lt;your-token&gt;</grey>')
+        HTML('<grey>Please login with: snow --token &lt;your-token&gt;</grey>')
     )
     print_formatted_text('')
 
 
-def display_snc_token_expired() -> None:
+def display_snow_token_expired() -> None:
     """Display message when Snowcell token has expired."""
     print_formatted_text('')
     print_formatted_text(HTML('<ansired>⚠ Snowcell token has expired</ansired>'))
     print_formatted_text(
-        HTML('<grey>Please login again with: snc --token &lt;your-token&gt;</grey>')
+        HTML('<grey>Please login again with: snow --token &lt;your-token&gt;</grey>')
     )
     print_formatted_text('')

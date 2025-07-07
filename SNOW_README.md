@@ -119,7 +119,6 @@ snow --status
 ```bash
 snow --chat
 ```
-
 ### `snow --logout`
 
 **Purpose**: End session and clear authentication
