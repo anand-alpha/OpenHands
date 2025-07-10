@@ -303,6 +303,7 @@ async def run_session(
 
     # Add MCP tools to the agent IMMEDIATELY after memory creation
     # This ensures MCP tools are available from the start of the chat
+    # clear()
     if agent.config.enable_mcp:
         logger.info("Initializing MCP tools for chat session...")
         print_formatted_text(HTML('<ansiblue>🔧 Initializing MCP tools...</ansiblue>'))

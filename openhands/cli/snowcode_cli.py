@@ -242,7 +242,7 @@ def main() -> None:
 
             if handle_login_command(args.token):
                 # After successful login, automatically start chat
-                print_formatted_text('')
+                # print_formatted_text('')
                 print_formatted_text(
                     HTML('<gold>🎉 Welcome to Snowcode AI Assistant!</gold>')
                 )

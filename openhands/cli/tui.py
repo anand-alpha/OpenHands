@@ -507,8 +507,8 @@ def display_shutdown_message(usage_metrics: UsageMetrics, session_id: str) -> No
     duration_str = get_session_duration(usage_metrics.session_init_time)
 
     print_formatted_text(HTML('<grey>Closing current conversation...</grey>'))
-    print_formatted_text('')
-    display_usage_metrics(usage_metrics)
+    # print_formatted_text('')
+    # display_usage_metrics(usage_metrics)
     print_formatted_text('')
     print_formatted_text(HTML(f'<grey>Conversation duration: {duration_str}</grey>'))
     print_formatted_text('')

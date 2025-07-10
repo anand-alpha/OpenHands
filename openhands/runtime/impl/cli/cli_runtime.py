@@ -134,11 +134,11 @@ class CLIRuntime(Runtime):
 
         # Set up workspace
         if self.config.workspace_base is not None:
-            logger.warning(
-                f'Workspace base path is set to {self.config.workspace_base}. '
-                'It will be used as the path for the agent to run in. '
-                'Be careful, the agent can EDIT files in this directory!'
-            )
+            # logger.warning(
+            #     f'Workspace base path is set to {self.config.workspace_base}. '
+            #     'It will be used as the path for the agent to run in. '
+            #     'Be careful, the agent can EDIT files in this directory!'
+            # )
             self._workspace_path = self.config.workspace_base
         else:
             # Create a temporary directory for the workspace
@@ -159,11 +159,11 @@ class CLIRuntime(Runtime):
         self._is_windows = sys.platform == 'win32'
         self._powershell_session: WindowsPowershellSession | None = None
 
-        logger.warning(
-            'Initializing CLIRuntime. WARNING: NO SANDBOX IS USED. '
-            'This runtime executes commands directly on the local system. '
-            'Use with caution in untrusted environments.'
-        )
+        # logger.warning(
+        #     'Initializing CLIRuntime. WARNING: NO SANDBOX IS USED. '
+        #     'This runtime executes commands directly on the local system. '
+        #     'Use with caution in untrusted environments.'
+        # )
 
     async def connect(self) -> None:
         """Initialize the runtime connection."""

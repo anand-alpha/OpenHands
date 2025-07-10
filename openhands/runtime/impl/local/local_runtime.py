@@ -240,11 +240,11 @@ class LocalRuntime(ActionExecutionClient):
         else:
             # Set up workspace directory
             if self.config.workspace_base is not None:
-                logger.warning(
-                    f'Workspace base path is set to {self.config.workspace_base}. '
-                    'It will be used as the path for the agent to run in. '
-                    'Be careful, the agent can EDIT files in this directory!'
-                )
+                # logger.warning(
+                #     f'Workspace base path is set to {self.config.workspace_base}. '
+                #     'It will be used as the path for the agent to run in. '
+                #     'Be careful, the agent can EDIT files in this directory!'
+                # )
                 self.config.workspace_mount_path_in_sandbox = self.config.workspace_base
                 self._temp_workspace = None
             else:
