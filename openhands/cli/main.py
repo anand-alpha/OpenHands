@@ -370,36 +370,36 @@ async def run_session(
 
     # Customize welcome message to show MCP tools availability
     welcome_message = 'What do you want to build?'
-    if agent.config.enable_mcp and agent.mcp_tools:
-        # agent.mcp_tools is a dict, so get tool names from the keys
-        mcp_tool_names = (
-            list(agent.mcp_tools.keys())
-            if hasattr(agent.mcp_tools, 'keys')
-            else [tool["function"]["name"] for tool in agent.mcp_tools.values()]
-        )
-        welcome_message += f'\n\n🔧 MCP Tools Available: {", ".join(mcp_tool_names)}'
+    # if agent.config.enable_mcp and agent.mcp_tools:
+    #     # agent.mcp_tools is a dict, so get tool names from the keys
+    #     mcp_tool_names = (
+    #         list(agent.mcp_tools.keys())
+    #         if hasattr(agent.mcp_tools, 'keys')
+    #         else [tool["function"]["name"] for tool in agent.mcp_tools.values()]
+    #     )
+    #     welcome_message += f'\n\n🔧 MCP Tools Available: {", ".join(mcp_tool_names)}'
 
     initial_message = ''  # from the user
 
-    if task_content:
-        initial_message = task_content
+    # if task_content:
+    #     initial_message = task_content
 
     # If we loaded a state, we are resuming a previous session
-    if initial_state is not None:
-        logger.info(f'Resuming session: {sid}')
+    # if initial_state is not None:
+    #     logger.info(f'Resuming session: {sid}')
 
-        if initial_state.last_error:
-            # If the last session ended in an error, provide a message.
-            initial_message = (
-                'NOTE: the last session ended with an error.'
-                "Let's get back on track. Do NOT resume your task. Ask me about it."
-            )
-        else:
-            # If we are resuming, we already have a task
-            initial_message = ''
-            welcome_message += '\nLoading previous conversation.'
+    #     if initial_state.last_error:
+    #         # If the last session ended in an error, provide a message.
+    #         initial_message = (
+    #             'NOTE: the last session ended with an error.'
+    #             "Let's get back on track. Do NOT resume your task. Ask me about it."
+    #         )
+    #     else:
+    #         # If we are resuming, we already have a task
+    #         initial_message = ''
+    #         welcome_message += '\nLoading previous conversation.'
 
-    # Show OpenHands welcome
+    # # Show OpenHands welcome
     display_welcome_message(welcome_message)
 
     # The prompt_for_next_task will be triggered if the agent enters AWAITING_USER_INPUT.
