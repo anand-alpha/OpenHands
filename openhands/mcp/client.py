@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Any
 
 from fastmcp import Client
 from fastmcp.client.transports import SSETransport, StreamableHttpTransport
@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from openhands.core.config.mcp_config import MCPSHTTPServerConfig, MCPSSEServerConfig
 from openhands.core.logger import openhands_logger as logger
 from openhands.mcp.tool import MCPClientTool
+from openhands.mcp.registry import register_mcp_client, unregister_mcp_client
 
 
 class MCPClient(BaseModel):
@@ -22,6 +23,7 @@ class MCPClient(BaseModel):
     description: str = 'MCP client tools for server interaction'
     tools: list[MCPClientTool] = Field(default_factory=list)
     tool_map: dict[str, MCPClientTool] = Field(default_factory=dict)
+    server_info: str = "unknown"  # Server URL or name for logging
 
     async def _initialize_and_list_tools(self) -> None:
         """Initialize session and populate tool map."""
@@ -57,6 +59,9 @@ class MCPClient(BaseModel):
         server_url = server.url
         api_key = server.api_key
 
+        # Store server info for better error reporting
+        self.server_info = f"{server_url}"
+
         if not server_url:
             raise ValueError('Server URL is required.')
 
@@ -88,7 +93,18 @@ class MCPClient(BaseModel):
 
             self.client = Client(transport, timeout=timeout)
 
-            await self._initialize_and_list_tools()
+            # Try to initialize and handle anyio.ClosedResourceError gracefully
+            try:
+                await self._initialize_and_list_tools()
+                # Register this client for cleanup tracking after successful initialization
+                register_mcp_client(self)
+            except Exception as e:
+                # Close the client on initialization failure
+                if self.client:
+                    self.client = None
+                # Re-raise the error
+                raise
+
         except McpError as e:
             logger.error(f'McpError connecting to {server_url}: {e}')
             raise  # Re-raise the error
@@ -107,3 +123,18 @@ class MCPClient(BaseModel):
 
         async with self.client:
             return await self.client.call_tool_mcp(name=tool_name, arguments=args)
+
+    def close(self):
+        """Close the HTTP connection"""
+        # Close the client if it exists
+        # This is a synchronous method that just cleans up resources
+        try:
+            if self.client:
+                logger.debug(f"Closing HTTP/SSE MCP client connection")
+                # Just clear the reference - the client's __del__ will handle cleanup
+                self.client = None
+        except Exception as e:
+            logger.debug(f"Error during HTTP MCP client cleanup: {e}")
+        finally:
+            # Unregister from cleanup tracking
+            unregister_mcp_client(self)

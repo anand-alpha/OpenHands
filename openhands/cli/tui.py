@@ -139,13 +139,9 @@ def display_initialization_animation(text: str, is_loaded: asyncio.Event) -> Non
 
 
 def display_banner(session_id: str) -> None:
-    import os
-
-    # Check if we're running with Snowcode branding
-    if os.environ.get('SNOWCODE_BRANDING') == 'true':
-        print_formatted_text(
-            HTML(
-                r"""<gold>
+    print_formatted_text(
+        HTML(
+            r"""<gold>
      ____                                   _
     / ___| _ __   _____      _____ ___   __| | ___
     \___ \| '_ \ / _ \ \ /\ / / __/ _ \ / _` |/ _ \
@@ -155,22 +151,7 @@ def display_banner(session_id: str) -> None:
             ),
             style=DEFAULT_STYLE,
         )
-        print_formatted_text(HTML(f'<grey>Snowcode AI Assistant v{__version__}</grey>'))
-    else:
-        print_formatted_text(
-            HTML(
-                r"""<gold>
-     ___                    _   _                 _
-    /  _ \ _ __   ___ _ __ | | | | __ _ _ __   __| |___
-    | | | | '_ \ / _ \ '_ \| |_| |/ _` | '_ \ / _` / __|
-    | |_| | |_) |  __/ | | |  _  | (_| | | | | (_| \__ \
-    \___ /| .__/ \___|_| |_|_| |_|\__,_|_| |_|\__,_|___/
-          |_|
-        </gold>"""
-            ),
-            style=DEFAULT_STYLE,
-        )
-        print_formatted_text(HTML(f'<grey>OpenHands CLI v{__version__}</grey>'))
+    print_formatted_text(HTML(f'<grey>Snowcode AI Assistant v{__version__}</grey>'))
 
     print_formatted_text('')
     print_formatted_text(HTML(f'<grey>Initialized conversation {session_id}</grey>'))

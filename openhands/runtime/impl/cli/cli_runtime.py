@@ -689,8 +689,40 @@ class CLIRuntime(Runtime):
         )
 
     async def call_tool_mcp(self, action: MCPAction) -> Observation:
-        """Not implemented for CLI runtime."""
-        return ErrorObservation('MCP functionality is not implemented in CLIRuntime')
+        """Handle MCP tool calls in CLI runtime."""
+        import sys
+
+        from openhands.events.observation import ErrorObservation
+
+        # Check if we're on Windows - MCP is disabled on Windows
+        if sys.platform == 'win32':
+            logger.info('MCP functionality is disabled on Windows')
+            return ErrorObservation('MCP functionality is not available on Windows')
+
+        # Import here to avoid circular imports
+        from openhands.mcp.utils import call_tool_mcp as call_tool_mcp_handler
+        from openhands.mcp.utils import create_mcp_clients, create_stdio_mcp_clients
+
+        # Get the MCP config from the runtime
+        mcp_config = self.config.mcp
+        logger.debug(
+            f'Creating MCP clients with HTTP servers: {mcp_config.shttp_servers} and stdio servers: {mcp_config.stdio_servers}'
+        )
+
+        # Create clients for HTTP/SSE servers
+        http_clients = await create_mcp_clients(
+            mcp_config.sse_servers, mcp_config.shttp_servers, None
+        )
+
+        # Create clients for stdio servers
+        stdio_clients = await create_stdio_mcp_clients(mcp_config.stdio_servers, None)
+
+        # Combine all clients
+        mcp_clients = http_clients + stdio_clients
+
+        # Call the tool and return the result
+        result = await call_tool_mcp_handler(mcp_clients, action)
+        return result
 
     @property
     def workspace_root(self) -> Path:
@@ -869,8 +901,22 @@ class CLIRuntime(Runtime):
     def get_mcp_config(
         self, extra_stdio_servers: list[MCPStdioServerConfig] | None = None
     ) -> MCPConfig:
-        # TODO: Load MCP config from a local file
-        return MCPConfig()
+        # Load MCP config from the main config (loaded from config.toml)
+        mcp_config = self.config.mcp
+
+        # Add any extra stdio servers if provided
+        if extra_stdio_servers:
+            # Create a new MCPConfig with combined stdio servers
+            combined_stdio_servers = (
+                list(mcp_config.stdio_servers) + extra_stdio_servers
+            )
+            mcp_config = MCPConfig(
+                sse_servers=mcp_config.sse_servers,
+                stdio_servers=combined_stdio_servers,
+                shttp_servers=mcp_config.shttp_servers,
+            )
+
+        return mcp_config
 
     def subscribe_to_shell_stream(
         self, callback: Callable[[str], None] | None = None

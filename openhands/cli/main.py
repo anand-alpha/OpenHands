@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import sys
+import time
 
 from prompt_toolkit import print_formatted_text
 from prompt_toolkit.formatted_text import HTML
@@ -89,15 +90,43 @@ async def cleanup_session(
     )
 
     try:
+        # Clean up MCP connections FIRST if they exist
+        # This needs to happen before we cancel other tasks
+        if hasattr(agent, 'mcp_tools') and agent.mcp_tools:
+            try:
+                # Clean up any MCP stdio processes
+                logger.debug("Cleaning up MCP connections...")
+                from openhands.mcp.utils import cleanup_all_mcp_clients
+
+                await cleanup_all_mcp_clients()
+            except Exception as e:
+                logger.debug(f"Error during MCP cleanup: {e}")
+
         current_task = asyncio.current_task(loop)
         pending = [task for task in asyncio.all_tasks(loop) if task is not current_task]
 
         if pending:
+            # Give tasks a short grace period to complete
             done, pending_set = await asyncio.wait(set(pending), timeout=2.0)
             pending = list(pending_set)
 
         for task in pending:
-            task.cancel()
+            if not task.done():
+                task.cancel()
+
+        # Wait for the tasks to be properly cancelled
+        if pending:
+            try:
+                # Short timeout to ensure we don't hang during cleanup
+                await asyncio.wait_for(
+                    asyncio.gather(*pending, return_exceptions=True), timeout=1.0
+                )
+            except asyncio.TimeoutError:
+                # Some tasks didn't finish in time, that's ok for cleanup
+                pass
+            except Exception:
+                # Ignore any errors during final cleanup
+                pass
 
         agent.reset()
         runtime.close()
@@ -141,6 +170,7 @@ async def run_session(
         headless_mode=True,
         agent=agent,
     )
+    logger.info("Runtime created successfully")
 
     def stream_to_console(output: str) -> None:
         # Instead of printing to stdout, pass the string to the TUI module
@@ -271,18 +301,62 @@ async def run_session(
         conversation_instructions=conversation_instructions,
     )
 
-    # Add MCP tools to the agent
+    # Add MCP tools to the agent IMMEDIATELY after memory creation
+    # This ensures MCP tools are available from the start of the chat
     if agent.config.enable_mcp:
-        # Add OpenHands' MCP server by default
-        _, openhands_mcp_stdio_servers = (
-            OpenHandsMCPConfigImpl.create_default_mcp_server_config(
-                config.mcp_host, config, None
+        logger.info("Initializing MCP tools for chat session...")
+        print_formatted_text(HTML('<ansiblue>🔧 Initializing MCP tools...</ansiblue>'))
+        logger.info(f"Runtime MCP config: {runtime.config.mcp}")
+
+        try:
+            # Add shorter timeout to MCP initialization to prevent hanging
+            await asyncio.wait_for(
+                add_mcp_tools_to_agent(agent, runtime, memory),
+                timeout=15.0,  # Reduced from 30 to 15 seconds
             )
-        )
 
-        runtime.config.mcp.stdio_servers.extend(openhands_mcp_stdio_servers)
-
-        await add_mcp_tools_to_agent(agent, runtime, memory)
+            # Log MCP tool availability for debugging
+            mcp_tool_count = len(agent.mcp_tools) if agent.mcp_tools else 0
+            if mcp_tool_count > 0:
+                # agent.mcp_tools is a dict, so get tool names from the keys or values
+                mcp_tool_names = (
+                    list(agent.mcp_tools.keys())
+                    if hasattr(agent.mcp_tools, 'keys')
+                    else [tool["function"]["name"] for tool in agent.mcp_tools.values()]
+                )
+                logger.info(
+                    f"✅ MCP configured successfully: {mcp_tool_count} tools available: {mcp_tool_names}"
+                )
+                print_formatted_text(
+                    HTML(
+                        f'<ansigreen>✅ MCP tools loaded: {", ".join(mcp_tool_names)}</ansigreen>'
+                    )
+                )
+            else:
+                logger.warning("⚠️ MCP enabled but no tools were loaded")
+                print_formatted_text(
+                    HTML(
+                        '<ansiyellow>⚠️ MCP enabled but no tools were loaded</ansiyellow>'
+                    )
+                )
+        except asyncio.TimeoutError:
+            logger.warning(
+                "⚠️ MCP initialization timed out after 15 seconds - continuing without MCP tools"
+            )
+            print_formatted_text(
+                HTML(
+                    '<ansired>⚠️ MCP initialization timed out - continuing without MCP tools</ansired>'
+                )
+            )
+        except Exception as e:
+            logger.error(
+                f"❌ MCP initialization failed: {e} - continuing without MCP tools"
+            )
+            print_formatted_text(
+                HTML(f'<ansired>⚠️ MCP initialization failed: {e}</ansired>')
+            )
+    else:
+        logger.warning("MCP is disabled in agent configuration")
 
     # Clear loading animation
     is_loaded.set()
@@ -294,7 +368,17 @@ async def run_session(
     if not skip_banner:
         display_banner(session_id=sid)
 
-    welcome_message = 'What do you want to build?'  # from the application
+    # Customize welcome message to show MCP tools availability
+    welcome_message = 'What do you want to build?'
+    if agent.config.enable_mcp and agent.mcp_tools:
+        # agent.mcp_tools is a dict, so get tool names from the keys
+        mcp_tool_names = (
+            list(agent.mcp_tools.keys())
+            if hasattr(agent.mcp_tools, 'keys')
+            else [tool["function"]["name"] for tool in agent.mcp_tools.values()]
+        )
+        welcome_message += f'\n\n🔧 MCP Tools Available: {", ".join(mcp_tool_names)}'
+
     initial_message = ''  # from the user
 
     if task_content:
@@ -486,31 +570,226 @@ After reviewing the file, please ask the user what they would like to do with it
 
 
 def main():
+    # Patch BaseSubprocessTransport.__del__ to prevent "RuntimeError: Event loop is closed"
+    try:
+        import asyncio.base_subprocess
+
+        # Save original __del__ method
+        original_del = asyncio.base_subprocess.BaseSubprocessTransport.__del__
+
+        # Define a safe __del__ method that doesn't use the event loop
+        def safe_del(self):
+            if not hasattr(self, '_proc') or self._proc is None:
+                return
+            try:
+                self._proc.kill()
+            except ProcessLookupError:
+                pass
+            except OSError:
+                pass
+            self._proc = None
+
+        # Replace the __del__ method
+        asyncio.base_subprocess.BaseSubprocessTransport.__del__ = safe_del
+        logger.debug(
+            "Patched BaseSubprocessTransport.__del__ to avoid 'Event loop is closed' errors"
+        )
+    except Exception as e:
+        logger.debug(f"Could not patch BaseSubprocessTransport.__del__: {e}")
+
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
+
+    # Flag to track if we're shutting down
+    shutting_down = False
+
+    # Improved signal handling for graceful shutdown
+    def signal_handler():
+        nonlocal shutting_down
+        if shutting_down:
+            # Second interrupt - force exit
+            print_formatted_text('\n⚠️ Forceful shutdown initiated...')
+            import os
+
+            os._exit(1)
+
+        shutting_down = True
+        print_formatted_text(
+            '\n⚠️ Received interrupt signal. Shutting down gracefully...'
+        )
+
+        # Cancel all running tasks
+        for task in asyncio.all_tasks(loop):
+            if not task.done():
+                task.cancel()
+
     try:
+        # Set up signal handlers for graceful shutdown
+        import signal
+
+        for sig in (signal.SIGTERM, signal.SIGINT):
+            try:
+                loop.add_signal_handler(sig, signal_handler)
+            except (NotImplementedError, RuntimeError):
+                # Windows doesn't support signal handlers in event loops
+                pass
+
         loop.run_until_complete(main_with_loop(loop))
     except KeyboardInterrupt:
-        print_formatted_text('⚠️ Session was interrupted: interrupted\n')
+        print_formatted_text('\n⚠️ Chat session interrupted. Goodbye!')
     except ConnectionRefusedError as e:
-        print(f'Connection refused: {e}')
+        print_formatted_text(f'\n❌ Connection refused: {e}')
         sys.exit(1)
     except Exception as e:
-        print(f'An error occurred: {e}')
+        print_formatted_text(f'\n❌ An error occurred: {e}')
+        import traceback
+
+        traceback.print_exc()
         sys.exit(1)
     finally:
         try:
-            # Cancel all running tasks
-            pending = asyncio.all_tasks(loop)
-            for task in pending:
-                task.cancel()
+            # Clean up MCP clients first, before event loop cleanup
+            try:
+                from openhands.mcp.utils import (
+                    cleanup_all_mcp_clients,
+                    get_active_mcp_clients_count,
+                )
+                import asyncio  # Make sure asyncio is imported in this scope
 
-            # Wait for all tasks to complete with a timeout
-            loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
-            loop.close()
+                # Only attempt cleanup if there are active MCP clients
+                if not loop.is_closed() and get_active_mcp_clients_count() > 0:
+                    # Run synchronously with a short timeout to ensure it completes
+                    try:
+                        # First try to close any stdioprocess (synchronously)
+                        print_formatted_text('Cleaning up MCP resources...')
+                        cleanup_task = asyncio.ensure_future(
+                            cleanup_all_mcp_clients(force_kill=True), loop=loop
+                        )
+                        loop.run_until_complete(
+                            asyncio.wait_for(cleanup_task, timeout=2.0)
+                        )
+                    except asyncio.TimeoutError:
+                        print_formatted_text(
+                            'Warning: MCP cleanup timed out - some processes may remain'
+                        )
+                    except Exception as e:
+                        print_formatted_text(f'Warning: MCP cleanup error: {e}')
+            except Exception as e:
+                print_formatted_text(f'Warning: MCP cleanup import error: {e}')
+
+            # Manually terminate any remaining subprocess (using os.kill if needed)
+            # This helps prevent "Event loop is closed" errors during __del__ methods
+            try:
+                import os
+                import signal
+                import psutil
+
+                current_process = psutil.Process()
+                # Check for any child processes that might be MCP related
+                for child in current_process.children(recursive=False):
+                    try:
+                        # Skip very short-lived processes (they're probably already exiting)
+                        if (time.time() - child.create_time()) < 2:
+                            continue
+
+                        print_formatted_text(f'Terminating child process: {child.pid}')
+                        child.terminate()  # Send SIGTERM
+
+                        # Give it a moment to terminate gracefully
+                        try:
+                            child.wait(timeout=0.5)
+                        except psutil.TimeoutExpired:
+                            # If it didn't terminate, force kill it
+                            print_formatted_text(f'Force killing process: {child.pid}')
+                            child.kill()  # Send SIGKILL
+                    except psutil.NoSuchProcess:
+                        pass  # Process already gone
+                    except Exception as e:
+                        print_formatted_text(
+                            f'Warning: Error terminating process {child.pid}: {e}'
+                        )
+            except ImportError:
+                # psutil might not be available
+                print_formatted_text(
+                    'Warning: psutil not available for advanced process cleanup'
+                )
+            except Exception as e:
+                print_formatted_text(f'Warning: Error during process cleanup: {e}')
+
+            # Small delay before continuing with loop cleanup
+            time.sleep(
+                0.2
+            )  # Use time.sleep instead of asyncio.sleep to avoid loop issues
+
+            # Graceful cleanup with timeout
+            if not loop.is_closed():
+                pending = [task for task in asyncio.all_tasks(loop) if not task.done()]
+                if pending:
+                    # Cancel all pending tasks
+                    for task in pending:
+                        if not task.done():
+                            task.cancel()
+
+                    # Wait for cancellation with timeout
+                    try:
+                        loop.run_until_complete(
+                            asyncio.wait_for(
+                                asyncio.gather(*pending, return_exceptions=True),
+                                timeout=1.0,  # Shorter timeout to avoid hanging
+                            )
+                        )
+                    except (asyncio.TimeoutError, asyncio.CancelledError, RuntimeError):
+                        pass  # Some tasks didn't finish in time, that's ok
+                    except Exception:
+                        pass  # Ignore cleanup errors
+
+                try:
+                    # First run GC to clean up any references that could trigger __del__ with loop calls
+                    import gc
+
+                    gc.collect()
+
+                    # Make sure we're not holding references to any transports
+                    for obj in gc.get_objects():
+                        if hasattr(obj, "_loop") and hasattr(obj, "close"):
+                            try:
+                                if not hasattr(obj, "_closed") or not obj._closed:
+                                    obj.close()
+                            except Exception:
+                                pass
+                except Exception:
+                    pass
+
+                # Finally close the loop
+                loop.close()
+
+                # Suppress the RuntimeError warnings from BaseSubprocessTransport.__del__
+                # by patching the low-level asyncio implementation before exit
+                try:
+                    # Create a safer __del__ that doesn't try to use the loop
+                    def safe_del(self):
+                        try:
+                            if hasattr(self, "_proc") and self._proc:
+                                try:
+                                    self._proc.kill()
+                                except Exception:
+                                    pass
+                                self._proc = None
+                        except Exception:
+                            pass
+
+                    # If possible, patch BaseSubprocessTransport.__del__ with our safe version
+                    import sys
+
+                    if 'asyncio.base_subprocess' in sys.modules:
+                        sys.modules[
+                            'asyncio.base_subprocess'
+                        ].BaseSubprocessTransport.__del__ = safe_del
+                except Exception:
+                    pass
         except Exception as e:
-            print(f'Error during cleanup: {e}')
-            sys.exit(1)
+            # Ignore cleanup errors but log them for debugging
+            print_formatted_text(f'Warning: Final cleanup error: {e}')
 
 
 if __name__ == '__main__':

@@ -1,6 +1,7 @@
 ---
 title: Model Context Protocol (MCP)
-description: This page outlines how to configure and use the Model Context Protocol (MCP) in OpenHands, allowing you
+description:
+  This page outlines how to configure and use the Model Context Protocol (MCP) in OpenHands, allowing you
   to extend the agent's capabilities with custom tools.
 ---
 
@@ -13,8 +14,9 @@ or custom tools. MCP is based on the open standard defined at [modelcontextproto
 ## Configuration
 
 MCP configuration can be defined in:
-* The OpenHands UI through the Settings under the `MCP` tab.
-* The `config.toml` file under the `[mcp]` section if not using the UI.
+
+- The OpenHands UI through the Settings under the `MCP` tab.
+- The `config.toml` file under the `[mcp]` section if not using the UI.
 
 ### Configuration Example via config.toml
 
@@ -32,7 +34,10 @@ sse_servers = [
 # Stdio Servers - Local processes that communicate via standard input/output
 stdio_servers = [
     # Basic stdio server
-    {name="fetch", command="uvx", args=["mcp-server-fetch"]},
+    {name="fetch",
+    command="uvx",
+    args=["mcp-server-fetch"]
+    },
 
     # Stdio server with environment variables
     {
@@ -62,14 +67,17 @@ SSE servers are configured using either a string URL or an object with the follo
 Stdio servers are configured using an object with the following properties:
 
 - `name` (required)
+
   - Type: `str`
   - Description: A unique name for the server
 
 - `command` (required)
+
   - Type: `str`
   - Description: The command to run the server
 
 - `args` (optional)
+
   - Type: `list of str`
   - Default: `[]`
   - Description: Command-line arguments to pass to the server
