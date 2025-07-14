@@ -15,6 +15,9 @@ from openhands.mcp.registry import (
 # Expose the main add_mcp_tools_to_agent function for external use
 from openhands.mcp.utils import add_mcp_tools_to_agent
 
+# Enhanced MCP utilities
+from openhands.mcp.enhanced import enhanced_add_mcp_tools_to_agent
+
 # Protocol definitions have minimal dependencies
 from openhands.mcp.protocol import MCPClientProtocol
 
@@ -42,4 +45,18 @@ __all__ = [
     "MCPClientProtocol",
     "get_mcp_client",
     "get_mcp_tool",
+    "enhanced_add_mcp_tools_to_agent",
+]
+
+# Update all exports
+__all__ = [
+    "add_mcp_tools_to_agent",
+    "register_mcp_client",
+    "unregister_mcp_client",
+    "get_active_mcp_clients_count",
+    "cleanup_all_mcp_clients",
+    "MCPClientProtocol",
+    "get_mcp_client",
+    "get_mcp_tool",
+    "enhanced_add_mcp_tools_to_agent",
 ]

@@ -759,6 +759,18 @@ def get_parser() -> argparse.ArgumentParser:
         type=bool,
         default=False,
     )
+    parser.add_argument(
+        '--config-edit',
+        help='Launch the interactive MCP server configuration editor',
+        action='store_true',
+        default=False,
+    )
+    parser.add_argument(
+        '--config-validate',
+        help='Validate the MCP server configuration and exit',
+        action='store_true',
+        default=False,
+    )
     return parser
 
 

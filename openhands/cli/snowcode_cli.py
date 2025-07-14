@@ -63,6 +63,16 @@ def display_snowcode_help() -> None:
         HTML('• <gold><b>snow --logout</b></gold> - Logout and end session')
     )
     print_formatted_text('')
+    print_formatted_text(HTML('<gold>Configuration Management:</gold>'))
+    print_formatted_text(
+        HTML('• <gold><b>snow --config-edit</b></gold> - Edit MCP server configuration')
+    )
+    print_formatted_text(
+        HTML(
+            '• <gold><b>snow --config-validate</b></gold> - Validate MCP server configuration'
+        )
+    )
+    print_formatted_text('')
     print_formatted_text(
         HTML(
             '<grey>After authentication, you will automatically enter the chat interface.</grey>'
@@ -185,6 +195,56 @@ def handle_status_command() -> None:
     display_status(auth_info)
 
 
+def handle_config_edit_command() -> None:
+    """Handle config-edit command."""
+    try:
+        from openhands.cli.config_editor import MCPConfigEditor
+
+        print_formatted_text(
+            HTML('<gold>🔧 Launching MCP Configuration Editor...</gold>')
+        )
+        print_formatted_text('')
+
+        editor = MCPConfigEditor('config.toml')
+        editor.run()
+
+    except KeyboardInterrupt:
+        print_formatted_text(
+            HTML('\n<ansiyellow>👋 Configuration editor interrupted</ansiyellow>')
+        )
+    except Exception as e:
+        print_formatted_text(HTML(f'\n<ansired>❌ Error: {e}</ansired>'))
+
+
+def handle_config_validate_command() -> None:
+    """Handle config-validate command."""
+    try:
+        from openhands.cli.config_editor import MCPConfigEditor
+
+        print_formatted_text(HTML('<gold>🔍 Validating MCP Configuration...</gold>'))
+        print_formatted_text('')
+
+        editor = MCPConfigEditor('config.toml')
+        is_valid = editor.validate_config()
+
+        if is_valid:
+            print_formatted_text(
+                HTML('<ansigreen>✅ Configuration is ready to use!</ansigreen>')
+            )
+            sys.exit(0)
+        else:
+            print_formatted_text(
+                HTML(
+                    '<ansired>❌ Configuration has errors. Please fix them before using.</ansired>'
+                )
+            )
+            sys.exit(1)
+
+    except Exception as e:
+        print_formatted_text(HTML(f'<ansired>❌ Error: {e}</ansired>'))
+        sys.exit(1)
+
+
 def parse_arguments() -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
@@ -197,6 +257,8 @@ Examples:
   snow --status                   Check authentication status
   snow --chat                     Start chat session (if authenticated)
   snow --logout                   Logout
+  snow --config-edit              Edit MCP server configuration
+  snow --config-validate          Validate MCP server configuration
         ''',
     )
 
@@ -217,6 +279,16 @@ Examples:
         action='store_true',
         help='Start chat session (requires authentication)',
     )
+    group.add_argument(
+        '--config-edit',
+        action='store_true',
+        help='Launch the interactive MCP server configuration editor',
+    )
+    group.add_argument(
+        '--config-validate',
+        action='store_true',
+        help='Validate the MCP server configuration and exit',
+    )
 
     return parser.parse_args()
 
@@ -231,12 +303,27 @@ def main() -> None:
         # display_snowcode_banner()
 
         # If no arguments provided, show help
-        if not any([args.token, args.status, args.logout, args.chat]):
+        if not any(
+            [
+                args.token,
+                args.status,
+                args.logout,
+                args.chat,
+                args.config_edit,
+                args.config_validate,
+            ]
+        ):
             display_snowcode_help()
             return
 
         # Handle commands
-        if args.token:
+        if args.config_edit:
+            handle_config_edit_command()
+
+        elif args.config_validate:
+            handle_config_validate_command()
+
+        elif args.token:
             print_formatted_text(HTML(f'<grey>Authenticating with Snowcode...</grey>'))
             print_formatted_text('')
 
@@ -283,6 +370,12 @@ def main() -> None:
 
         elif args.logout:
             handle_logout_command()
+
+        elif args.config_edit:
+            handle_config_edit_command()
+
+        elif args.config_validate:
+            handle_config_validate_command()
 
     except KeyboardInterrupt:
         print_formatted_text('')

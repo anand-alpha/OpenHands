@@ -66,6 +66,7 @@ from openhands.events.observation import (
 )
 from openhands.io import read_task
 from openhands.mcp import add_mcp_tools_to_agent
+from openhands.mcp.enhanced import enhanced_add_mcp_tools_to_agent
 from openhands.memory.condenser.impl.llm_summarizing_condenser import (
     LLMSummarizingCondenserConfig,
 )
@@ -312,19 +313,34 @@ async def run_session(
         try:
             # Add shorter timeout to MCP initialization to prevent hanging
             await asyncio.wait_for(
-                add_mcp_tools_to_agent(agent, runtime, memory),
-                timeout=15.0,  # Reduced from 30 to 15 seconds
+                enhanced_add_mcp_tools_to_agent(agent, runtime=runtime, memory=memory),
+                timeout=45.0,  # Increased from 25 to 45 seconds to accommodate remote servers
             )
 
             # Log MCP tool availability for debugging
             mcp_tool_count = len(agent.mcp_tools) if agent.mcp_tools else 0
             if mcp_tool_count > 0:
-                # agent.mcp_tools is a dict, so get tool names from the keys or values
-                mcp_tool_names = (
-                    list(agent.mcp_tools.keys())
-                    if hasattr(agent.mcp_tools, 'keys')
-                    else [tool["function"]["name"] for tool in agent.mcp_tools.values()]
-                )
+                # agent.mcp_tools can be a dict or a list
+                if isinstance(agent.mcp_tools, dict):
+                    mcp_tool_names = list(agent.mcp_tools.keys())
+                elif isinstance(agent.mcp_tools, list):
+                    mcp_tool_names = []
+                    for tool in agent.mcp_tools:
+                        if hasattr(tool, 'name'):
+                            mcp_tool_names.append(tool.name)
+                        elif isinstance(tool, dict):
+                            # Handle tool dict format: {'type': 'function', 'function': {'name': '...'}}
+                            if 'function' in tool and 'name' in tool['function']:
+                                mcp_tool_names.append(tool['function']['name'])
+                            elif 'name' in tool:
+                                mcp_tool_names.append(tool['name'])
+                            else:
+                                mcp_tool_names.append('unknown_tool')
+                        else:
+                            mcp_tool_names.append(str(tool))
+                else:
+                    mcp_tool_names = ["unknown"]
+
                 logger.info(
                     f"✅ MCP configured successfully: {mcp_tool_count} tools available: {mcp_tool_names}"
                 )
@@ -342,13 +358,15 @@ async def run_session(
                 )
         except asyncio.TimeoutError:
             logger.warning(
-                "⚠️ MCP initialization timed out after 15 seconds - continuing without MCP tools"
+                "⚠️ MCP initialization timed out after 45 seconds - continuing without MCP tools"
             )
             print_formatted_text(
                 HTML(
-                    '<ansired>⚠️ MCP initialization timed out - continuing without MCP tools</ansired>'
+                    '<ansiyellow>⚠️ MCP initialization timed out - continuing without MCP tools</ansiyellow>'
                 )
             )
+            # Set empty MCP tools to prevent further errors
+            agent.mcp_tools = []
         except Exception as e:
             logger.error(
                 f"❌ MCP initialization failed: {e} - continuing without MCP tools"
@@ -447,6 +465,31 @@ async def run_setup_flow(config: OpenHandsConfig, settings_store: FileSettingsSt
 async def main_with_loop(loop: asyncio.AbstractEventLoop) -> None:
     """Runs the agent in CLI mode."""
     args = parse_arguments()
+
+    # Handle config editor options
+    if args.config_edit or args.config_validate:
+        try:
+            from openhands.cli.config_editor import MCPConfigEditor
+
+            editor = MCPConfigEditor(args.config_file)
+
+            if args.config_validate:
+                # Just validate and exit
+                is_valid = editor.validate_config()
+                exit_code = 0 if is_valid else 1
+                import sys
+
+                sys.exit(exit_code)
+            else:
+                # Run interactive editor
+                editor.run()
+        except KeyboardInterrupt:
+            print_formatted_text(
+                HTML('\n<ansiyellow>👋 Configuration editor interrupted</ansiyellow>')
+            )
+        except Exception as e:
+            print_formatted_text(HTML(f'\n<ansired>❌ Error: {e}</ansired>'))
+        return
 
     logger.setLevel(logging.WARNING)
 

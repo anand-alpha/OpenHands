@@ -152,25 +152,60 @@ async def fetch_mcp_tools_from_config(
     mcp_tools = []
     try:
         logger.info(f'Creating MCP clients with config: {mcp_config}')
-        logger.info(f'SSE servers: {mcp_config.sse_servers}')
-        logger.info(f'SHTTP servers: {mcp_config.shttp_servers}')
-        logger.info(f'Stdio servers: {mcp_config.stdio_servers}')
+
+        # Log server information for debugging
+        if hasattr(mcp_config, 'stdio_servers'):
+            logger.info(f'Stdio servers: {len(mcp_config.stdio_servers)} configured')
+            for server in mcp_config.stdio_servers:
+                logger.info(
+                    f'Stdio server: {server.name} - {server.command} {" ".join(server.args)}'
+                )
+
+        if hasattr(mcp_config, 'sse_servers'):
+            logger.info(f'SSE servers: {len(mcp_config.sse_servers)} configured')
+
+        if hasattr(mcp_config, 'shttp_servers'):
+            logger.info(f'SHTTP servers: {len(mcp_config.shttp_servers)} configured')
+
+        # Process each server type in parallel to improve startup time
+        mcp_clients = []
 
         # Create HTTP/SSE clients
-        # Create HTTP/SSE clients
-        mcp_clients = await create_mcp_clients(
-            mcp_config.sse_servers, mcp_config.shttp_servers, conversation_id
+        http_clients_task = asyncio.create_task(
+            create_mcp_clients(
+                mcp_config.sse_servers, mcp_config.shttp_servers, conversation_id
+            )
         )
-        logger.info(f'Successfully created {len(mcp_clients)} HTTP/SSE MCP clients')
 
         # Create stdio clients
-        stdio_clients = await create_stdio_mcp_clients(
-            mcp_config.stdio_servers, conversation_id
+        stdio_clients_task = asyncio.create_task(
+            create_stdio_mcp_clients(mcp_config.stdio_servers, conversation_id)
         )
-        logger.info(f'Successfully created {len(stdio_clients)} stdio MCP clients')
+
+        # Wait for all client creation tasks to complete
+        done, pending = await asyncio.wait(
+            [http_clients_task, stdio_clients_task],
+            timeout=35.0,  # Increased timeout for all client creation (from 20.0 to 35.0)
+            return_when=asyncio.ALL_COMPLETED,
+        )
+
+        # Process completed tasks
+        for task in done:
+            try:
+                clients = task.result()
+                if clients:
+                    mcp_clients.extend(clients)
+            except Exception as e:
+                logger.error(f'Error getting MCP clients: {e}')
+
+        # Cancel any pending tasks
+        for task in pending:
+            task.cancel()
+
+        logger.info(f'Successfully created {len(mcp_clients)} total MCP clients')
 
         # Combine all clients
-        mcp_clients.extend(stdio_clients)
+        # mcp_clients already contains all clients from the parallel tasks
 
         if not mcp_clients:
             logger.warning('No MCP clients were successfully connected')

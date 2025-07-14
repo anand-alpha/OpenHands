@@ -37,14 +37,35 @@ async def create_stdio_mcp_clients(
 
         try:
             # Add timeout for stdio connections
+            # Allow more time for remote servers and npm installs
+            timeout = 20.0  # Increased from 12 to 20 seconds for npm package downloads
+            if "mcp-remote" in server.args or any(
+                "remote" in arg for arg in server.args
+            ):
+                timeout = 25.0  # Give remote servers more time
+                logger.info(
+                    f"Allowing {timeout}s timeout for remote MCP server {server.name}"
+                )
+            elif "-y" in server.args or "@" in " ".join(server.args):
+                # NPM packages might need download time on first run
+                timeout = 25.0
+                logger.info(
+                    f"Allowing {timeout}s timeout for npm package {server.name}"
+                )
+
+            logger.info(
+                f"Connecting to {server.name} with command: {server.command} {' '.join(server.args)}"
+            )
+
             await asyncio.wait_for(
                 client.connect_stdio(),
-                timeout=5.0,  # Reduced from 10 to 5 second timeout per server
+                timeout=timeout,
             )
             mcp_clients.append(client)
+            logger.info(f"✅ Successfully connected to stdio MCP server {server.name}")
         except asyncio.TimeoutError:
             logger.warning(
-                f'Connection to stdio MCP server {server.name} timed out after 5 seconds'
+                f"⚠️ Connection to stdio MCP server {server.name} timed out after {timeout} seconds"
             )
         except Exception as e:
             logger.error(

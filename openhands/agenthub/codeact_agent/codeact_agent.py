@@ -272,7 +272,27 @@ class CodeActAgent(Agent):
         return messages
 
     def response_to_actions(self, response: 'ModelResponse') -> list['Action']:
+        # Support both dict and list for mcp_tools
+        if hasattr(self.mcp_tools, 'keys'):
+            mcp_tool_names = list(self.mcp_tools.keys())
+        elif isinstance(self.mcp_tools, list):
+            mcp_tool_names = []
+            for tool in self.mcp_tools:
+                if hasattr(tool, 'name'):
+                    mcp_tool_names.append(tool.name)
+                elif isinstance(tool, dict):
+                    # Handle tool dict format: {'type': 'function', 'function': {'name': '...'}}
+                    if (
+                        'function' in tool
+                        and isinstance(tool['function'], dict)
+                        and 'name' in tool['function']
+                    ):
+                        mcp_tool_names.append(tool['function']['name'])
+                    elif 'name' in tool:
+                        mcp_tool_names.append(tool['name'])
+        else:
+            mcp_tool_names = []
         return codeact_function_calling.response_to_actions(
             response,
-            mcp_tool_names=list(self.mcp_tools.keys()),
+            mcp_tool_names=mcp_tool_names,
         )

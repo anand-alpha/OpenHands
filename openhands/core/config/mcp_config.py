@@ -141,9 +141,29 @@ class MCPConfig(BaseModel):
             # Convert all entries in stdio_servers to MCPStdioServerConfig objects
             if 'stdio_servers' in data:
                 servers = []
-                for server in data['stdio_servers']:
-                    servers.append(MCPStdioServerConfig(**server))
-                data['stdio_servers'] = servers
+                try:
+                    for server in data['stdio_servers']:
+                        # Ensure server is in the correct format
+                        if isinstance(server, dict):
+                            # Already in the right format
+                            servers.append(MCPStdioServerConfig(**server))
+                        elif isinstance(server, str) and isinstance(
+                            data['stdio_servers'], dict
+                        ):
+                            # Handle old format where server name is a key in a dict
+                            server_name = server
+                            server_config = data['stdio_servers'][server]
+                            if isinstance(server_config, dict):
+                                server_config['name'] = server_name
+                                servers.append(MCPStdioServerConfig(**server_config))
+                    data['stdio_servers'] = servers
+                except (TypeError, ValueError) as e:
+                    logger.warning(f"Error processing stdio_servers: {e}")
+                    logger.warning(
+                        "Make sure stdio_servers is formatted as an array of objects with name, command, and args fields"
+                    )
+                    # Use an empty list to avoid validation errors
+                    data['stdio_servers'] = []
 
             if 'shttp_servers' in data:
                 data['shttp_servers'] = cls._normalize_servers(data['shttp_servers'])

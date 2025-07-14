@@ -16,6 +16,30 @@ from openhands.mcp.tool import MCPClientTool
 from openhands.mcp.registry import register_mcp_client, unregister_mcp_client
 
 
+def is_informational_stderr(stderr_text: str) -> bool:
+    """Check if stderr text is informational rather than an error."""
+    if not stderr_text:
+        return False
+
+    stderr_lower = stderr_text.lower()
+    info_phrases = [
+        "running on stdio",
+        "server starting",
+        "listening",
+        "ready",
+        "using automatically selected",
+        "callback port",
+        "mcp server running",
+    ]
+
+    # Debug: print the stderr text and check result
+    result = any(phrase in stderr_lower for phrase in info_phrases)
+    # Uncomment for debugging:
+    # print(f"DEBUG: stderr_text='{stderr_text}', stderr_lower='{stderr_lower}', result={result}")
+
+    return result
+
+
 class StdioMCPClient(BaseModel):
     """MCP Client that connects to stdio-based MCP servers via subprocess"""
 
@@ -72,11 +96,91 @@ class StdioMCPClient(BaseModel):
             self.process.stdin.write(request_data.encode())
             await self.process.stdin.drain()
 
-            # Read initialize response
-            response_data = await self.process.stdout.readline()
-            if not response_data:
+            # Read initialize response with timeout
+            response_data = None  # Initialize response_data
+            try:
+                # Allow more time for remote servers
+                timeout = 5.0  # Increased from 3.0 to 5.0 seconds
+                if "mcp-remote" in self.server_config.args or any(
+                    "remote" in arg for arg in self.server_config.args
+                ):
+                    timeout = 10.0  # Give remote servers more time
+                    logger.info(
+                        f"Allowing {timeout}s timeout for remote MCP server {self.server_config.name}"
+                    )
+
+                # Also look for stderr output in case of errors
+                stderr_data = ""
+                try:
+                    stderr_future = asyncio.create_task(self.process.stderr.readline())
+                    stdout_future = asyncio.create_task(self.process.stdout.readline())
+                    done, pending = await asyncio.wait(
+                        [stdout_future, stderr_future],
+                        timeout=timeout,
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+
+                    # Handle the case where stderr comes first with informational message
+                    if stderr_future in done and stdout_future not in done:
+                        stderr_data = stderr_future.result().decode().strip()
+                        if is_informational_stderr(stderr_data):
+                            logger.info(
+                                f"MCP server {self.server_config.name} info: {stderr_data}"
+                            )
+                            # Wait for stdout to complete too (don't cancel it)
+                            try:
+                                await asyncio.wait_for(stdout_future, timeout=5.0)
+                                response_data = stdout_future.result()
+                            except asyncio.TimeoutError:
+                                raise RuntimeError(
+                                    f"Timeout waiting for JSON response from MCP server {self.server_config.name} after info message"
+                                )
+                        else:
+                            # Cancel stdout since we have a real error
+                            stdout_future.cancel()
+                            raise RuntimeError(
+                                f"Error from MCP server {self.server_config.name}: {stderr_data}"
+                            )
+                    else:
+                        # Cancel remaining tasks
+                        for task in pending:
+                            task.cancel()
+
+                    if stdout_future in done:
+                        response_data = stdout_future.result()
+                        if stderr_future in done:
+                            stderr_data = stderr_future.result().decode().strip()
+                            # Log informational stderr messages
+                            if is_informational_stderr(stderr_data):
+                                logger.info(
+                                    f"MCP server {self.server_config.name} info: {stderr_data}"
+                                )
+                    elif stderr_future in done:
+                        stderr_data = stderr_future.result().decode().strip()
+                        # This case is already handled above
+                        if not is_informational_stderr(stderr_data):
+                            raise RuntimeError(
+                                f"Error from MCP server {self.server_config.name}: {stderr_data}"
+                            )
+                    else:
+                        raise asyncio.TimeoutError()
+                except asyncio.TimeoutError:
+                    raise RuntimeError(
+                        f"Timeout waiting for response from stdio MCP server {self.server_config.name}"
+                    )
+
+                if not response_data:
+                    if stderr_data:
+                        raise RuntimeError(
+                            f"Error from MCP server {self.server_config.name}: {stderr_data}"
+                        )
+                    else:
+                        raise RuntimeError(
+                            f"No response from stdio MCP server {self.server_config.name} during initialization"
+                        )
+            except asyncio.TimeoutError:
                 raise RuntimeError(
-                    "No response from stdio MCP server during initialization"
+                    f"Timeout waiting for response from stdio MCP server {self.server_config.name}"
                 )
 
             init_response = json.loads(response_data.decode().strip())
@@ -110,10 +214,89 @@ class StdioMCPClient(BaseModel):
             self.process.stdin.write(request_data.encode())
             await self.process.stdin.drain()
 
-            # Read response
-            response_data = await self.process.stdout.readline()
-            if not response_data:
-                raise RuntimeError("No response from stdio MCP server")
+            # Read response with timeout
+            response_data = None  # Initialize response_data
+            try:
+                # Allow more time for remote servers
+                timeout = 5.0  # Increased from 3.0 to 5.0 seconds
+                if "mcp-remote" in self.server_config.args or any(
+                    "remote" in arg for arg in self.server_config.args
+                ):
+                    timeout = 10.0  # Give remote servers more time
+
+                # Also look for stderr output in case of errors
+                stderr_data = ""
+                try:
+                    stderr_future = asyncio.create_task(self.process.stderr.readline())
+                    stdout_future = asyncio.create_task(self.process.stdout.readline())
+                    done, pending = await asyncio.wait(
+                        [stdout_future, stderr_future],
+                        timeout=timeout,
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+
+                    # Handle the case where stderr comes first with informational message
+                    if stderr_future in done and stdout_future not in done:
+                        stderr_data = stderr_future.result().decode().strip()
+                        if is_informational_stderr(stderr_data):
+                            logger.info(
+                                f"MCP server {self.server_config.name} info: {stderr_data}"
+                            )
+                            # Wait for stdout to complete too (don't cancel it)
+                            try:
+                                await asyncio.wait_for(stdout_future, timeout=5.0)
+                                response_data = stdout_future.result()
+                            except asyncio.TimeoutError:
+                                raise RuntimeError(
+                                    f"Timeout waiting for JSON response from MCP server {self.server_config.name} after info message"
+                                )
+                        else:
+                            # Cancel stdout since we have a real error
+                            stdout_future.cancel()
+                            raise RuntimeError(
+                                f"Error from MCP server {self.server_config.name}: {stderr_data}"
+                            )
+                    else:
+                        # Cancel remaining tasks
+                        for task in pending:
+                            task.cancel()
+
+                    if stdout_future in done:
+                        response_data = stdout_future.result()
+                        if stderr_future in done:
+                            stderr_data = stderr_future.result().decode().strip()
+                            # Log informational stderr messages
+                            if is_informational_stderr(stderr_data):
+                                logger.info(
+                                    f"MCP server {self.server_config.name} info: {stderr_data}"
+                                )
+                    elif stderr_future in done:
+                        stderr_data = stderr_future.result().decode().strip()
+                        # This case is already handled above
+                        if not is_informational_stderr(stderr_data):
+                            raise RuntimeError(
+                                f"Error from MCP server {self.server_config.name}: {stderr_data}"
+                            )
+                    else:
+                        raise asyncio.TimeoutError()
+                except asyncio.TimeoutError:
+                    raise RuntimeError(
+                        f"Timeout waiting for tools list from stdio MCP server {self.server_config.name}"
+                    )
+
+                if not response_data:
+                    if stderr_data:
+                        raise RuntimeError(
+                            f"Error from MCP server {self.server_config.name}: {stderr_data}"
+                        )
+                    else:
+                        raise RuntimeError(
+                            f"No response from stdio MCP server {self.server_config.name} when getting tools list"
+                        )
+            except asyncio.TimeoutError:
+                raise RuntimeError(
+                    f"Timeout waiting for tools list from stdio MCP server {self.server_config.name}"
+                )
 
             response = json.loads(response_data.decode().strip())
 
