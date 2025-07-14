@@ -72,6 +72,9 @@ def display_snowcode_help() -> None:
             '• <gold><b>snow --config-validate</b></gold> - Validate MCP server configuration'
         )
     )
+    print_formatted_text(
+        HTML('• <gold><b>snow --config-health</b></gold> - Run MCP server health check')
+    )
     print_formatted_text('')
     print_formatted_text(
         HTML(
@@ -216,6 +219,24 @@ def handle_config_edit_command() -> None:
         print_formatted_text(HTML(f'\n<ansired>❌ Error: {e}</ansired>'))
 
 
+def handle_config_health_command() -> None:
+    """Handle config-health command."""
+    try:
+        # Import here to avoid circular imports
+        sys.path.insert(0, '/home/hac/code/OpenHands')
+        from mcp_health_check import MCPHealthChecker
+
+        print_formatted_text(HTML('<gold>🏥 Running MCP Health Check...</gold>'))
+        print_formatted_text('')
+
+        checker = MCPHealthChecker('config.toml')
+        checker.run_health_check()
+
+    except Exception as e:
+        print_formatted_text(HTML(f'<ansired>❌ Error: {e}</ansired>'))
+        sys.exit(1)
+
+
 def handle_config_validate_command() -> None:
     """Handle config-validate command."""
     try:
@@ -259,6 +280,7 @@ Examples:
   snow --logout                   Logout
   snow --config-edit              Edit MCP server configuration
   snow --config-validate          Validate MCP server configuration
+  snow --config-health            Run MCP server health check
         ''',
     )
 
@@ -289,6 +311,11 @@ Examples:
         action='store_true',
         help='Validate the MCP server configuration and exit',
     )
+    group.add_argument(
+        '--config-health',
+        action='store_true',
+        help='Run MCP server health check and troubleshooting',
+    )
 
     return parser.parse_args()
 
@@ -311,6 +338,7 @@ def main() -> None:
                 args.chat,
                 args.config_edit,
                 args.config_validate,
+                args.config_health,
             ]
         ):
             display_snowcode_help()
@@ -322,6 +350,9 @@ def main() -> None:
 
         elif args.config_validate:
             handle_config_validate_command()
+
+        elif args.config_health:
+            handle_config_health_command()
 
         elif args.token:
             print_formatted_text(HTML(f'<grey>Authenticating with Snowcode...</grey>'))
@@ -376,6 +407,9 @@ def main() -> None:
 
         elif args.config_validate:
             handle_config_validate_command()
+
+        elif args.config_health:
+            handle_config_health_command()
 
     except KeyboardInterrupt:
         print_formatted_text('')
