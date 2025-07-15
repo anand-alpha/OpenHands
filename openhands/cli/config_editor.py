@@ -110,83 +110,57 @@ class MCPConfigEditor:
             return True
 
     def test_server_connection(self, server_config: Dict) -> tuple[bool, str]:
-        """Test if an MCP server can be reached and is working"""
-        import subprocess
-        import tempfile
-        import json
-        import time
+        """Test if an MCP server can be reached and is working using robust package manager"""
+        import asyncio
 
         name = server_config.get('name', 'unknown')
-        command = server_config.get('command', '')
-        args = server_config.get('args', [])
-        env = server_config.get('env', {})
-
-        print_formatted_text(HTML(f'<ansiyellow>🔍 Testing connection to {name}...</ansiyellow>'))
+        print_formatted_text(
+            HTML(f'<ansiyellow>🔍 Testing connection to {name}...</ansiyellow>')
+        )
 
         try:
-            # Prepare environment
-            test_env = os.environ.copy()
-            test_env.update(env)
+            # Convert dict to MCPStdioServerConfig
+            from openhands.core.config.mcp_config import MCPStdioServerConfig
+            from openhands.mcp.package_manager import MCPPackageManager
 
-            # Test if command exists
-            if command == 'npx':
-                try:
-                    result = subprocess.run(['npx', '--version'],
-                                          capture_output=True, text=True, timeout=5)
-                    if result.returncode != 0:
-                        return False, "npx is not installed or not working"
-                except:
-                    return False, "npx is not available"
+            server_obj = MCPStdioServerConfig(
+                name=server_config['name'],
+                command=server_config['command'],
+                args=server_config['args'],
+                env=server_config.get('env', {}),
+            )
 
-            # For npm packages, check if they can be installed/run
-            if command == 'npx' and args:
-                package_name = args[0] if args[0] != '-y' else (args[1] if len(args) > 1 else None)
-                if package_name and package_name.startswith('@'):
-                    # Test npm package availability
-                    try:
-                        test_result = subprocess.run(['npx', '-y', package_name, '--help'],
-                                                   capture_output=True, text=True,
-                                                   timeout=30, env=test_env)
-                        if test_result.returncode != 0:
-                            error_msg = test_result.stderr.strip()
-                            if 'E404' in error_msg:
-                                return False, f"Package {package_name} not found (E404)"
-                            elif 'ENOENT' in error_msg:
-                                return False, f"Package {package_name} cannot be executed"
-                            else:
-                                return False, f"Package error: {error_msg[:100]}"
-                    except subprocess.TimeoutExpired:
-                        return False, f"Package {package_name} installation/test timed out"
-                    except Exception as e:
-                        return False, f"Failed to test package {package_name}: {str(e)}"
+            # Use async context manager properly
+            async def test_async():
+                async with MCPPackageManager() as package_manager:
+                    success, message = await package_manager.prepare_server(server_obj)
+                    return success, message
 
-            # Basic command test
+            # Run the async test
             try:
-                test_result = subprocess.run([command] + args[:1],
-                                           capture_output=True, text=True,
-                                           timeout=10, env=test_env)
-                # Many MCP servers return non-zero exit codes for help/version
-                # So we just check if the command can be executed
-                return True, "Connection test passed"
-            except subprocess.TimeoutExpired:
-                return False, "Command timed out"
-            except FileNotFoundError:
-                return False, f"Command '{command}' not found"
+                success, message = asyncio.run(test_async())
+                return success, message
             except Exception as e:
-                return False, f"Command failed: {str(e)}"
+                return False, f"Test failed: {str(e)}"
 
         except Exception as e:
-            return False, f"Test failed: {str(e)}"
+            return False, f"Configuration error: {str(e)}"
 
     def test_all_servers(self):
         """Test all configured MCP servers"""
         servers = self.get_mcp_servers()
         if not servers:
-            print_formatted_text(HTML('<ansiyellow>⚠️ No MCP servers configured</ansiyellow>'))
+            print_formatted_text(
+                HTML('<ansiyellow>⚠️ No MCP servers configured</ansiyellow>')
+            )
             return
 
-        print_formatted_text(HTML('<ansiblue>🔍 Testing MCP Server Connections</ansiblue>'))
-        print_formatted_text(HTML('<ansiyellow>This may take a few moments...</ansiyellow>'))
+        print_formatted_text(
+            HTML('<ansiblue>🔍 Testing MCP Server Connections</ansiblue>')
+        )
+        print_formatted_text(
+            HTML('<ansiyellow>This may take a few moments...</ansiyellow>')
+        )
         print()
 
         working_servers = []
@@ -197,7 +171,9 @@ class MCPConfigEditor:
             success, message = self.test_server_connection(server)
 
             if success:
-                print_formatted_text(HTML(f'  ✅ <ansigreen>{name}</ansigreen>: {message}'))
+                print_formatted_text(
+                    HTML(f'  ✅ <ansigreen>{name}</ansigreen>: {message}')
+                )
                 working_servers.append(server)
             else:
                 print_formatted_text(HTML(f'  ❌ <ansired>{name}</ansired>: {message}'))
@@ -205,12 +181,18 @@ class MCPConfigEditor:
 
         print()
         print_formatted_text(HTML(f'<ansiblue>Summary:</ansiblue>'))
-        print_formatted_text(HTML(f'  ✅ Working servers: <ansigreen>{len(working_servers)}</ansigreen>'))
-        print_formatted_text(HTML(f'  ❌ Failed servers: <ansired>{len(failed_servers)}</ansired>'))
+        print_formatted_text(
+            HTML(f'  ✅ Working servers: <ansigreen>{len(working_servers)}</ansigreen>')
+        )
+        print_formatted_text(
+            HTML(f'  ❌ Failed servers: <ansired>{len(failed_servers)}</ansired>')
+        )
 
         if failed_servers:
             print()
-            print_formatted_text(HTML('<ansiyellow>💡 Troubleshooting suggestions:</ansiyellow>'))
+            print_formatted_text(
+                HTML('<ansiyellow>💡 Troubleshooting suggestions:</ansiyellow>')
+            )
 
             for server, error in failed_servers:
                 name = server.get('name', 'unknown')
@@ -218,16 +200,28 @@ class MCPConfigEditor:
 
                 # Provide specific suggestions based on error type
                 if 'not found' in error or 'E404' in error:
-                    print_formatted_text(HTML(f'    💡 Try installing the package manually or check if it exists'))
+                    print_formatted_text(
+                        HTML(
+                            f'    💡 Try installing the package manually or check if it exists'
+                        )
+                    )
                 elif 'npx' in error:
-                    print_formatted_text(HTML(f'    💡 Install Node.js and npm: https://nodejs.org/'))
+                    print_formatted_text(
+                        HTML(f'    💡 Install Node.js and npm: https://nodejs.org/')
+                    )
                 elif 'timeout' in error:
-                    print_formatted_text(HTML(f'    💡 The server may be slow to start, try increasing timeout'))
+                    print_formatted_text(
+                        HTML(
+                            f'    💡 The server may be slow to start, try increasing timeout'
+                        )
+                    )
                 elif 'API' in error:
-                    print_formatted_text(HTML(f'    💡 Check if API keys are properly configured'))
+                    print_formatted_text(
+                        HTML(f'    💡 Check if API keys are properly configured')
+                    )
 
         # Offer to disable failed servers
-        if failed_servers and confirm('\nDisable failed servers?', default=True):
+        if failed_servers and confirm('\nDisable failed servers?'):
             self.disable_failed_servers([server for server, _ in failed_servers])
 
     def disable_failed_servers(self, failed_servers: List[Dict]):
@@ -235,16 +229,26 @@ class MCPConfigEditor:
         if not failed_servers:
             return
 
-        print_formatted_text(HTML('<ansiyellow>🔧 Disabling failed servers...</ansiyellow>'))
+        print_formatted_text(
+            HTML('<ansiyellow>🔧 Disabling failed servers...</ansiyellow>')
+        )
 
         servers = self.get_mcp_servers()
         for failed_server in failed_servers:
             if failed_server in servers:
                 servers.remove(failed_server)
-                print_formatted_text(HTML(f'  ✅ Disabled <ansired>{failed_server["name"]}</ansired>'))
+                print_formatted_text(
+                    HTML(f'  ✅ Disabled <ansired>{failed_server["name"]}</ansired>')
+                )
 
-        print_formatted_text(HTML('<ansigreen>✅ Failed servers have been disabled</ansigreen>'))
-        print_formatted_text(HTML('<ansiyellow>💡 You can re-enable them later after fixing the issues</ansiyellow>'))
+        print_formatted_text(
+            HTML('<ansigreen>✅ Failed servers have been disabled</ansigreen>')
+        )
+        print_formatted_text(
+            HTML(
+                '<ansiyellow>💡 You can re-enable them later after fixing the issues</ansiyellow>'
+            )
+        )
 
     def display_current_servers(self):
         """Display current MCP server configurations"""
@@ -306,7 +310,7 @@ class MCPConfigEditor:
 
         # Environment variables
         env = {}
-        if confirm('Add environment variables?', default=False):
+        if confirm('Add environment variables?'):
             print_formatted_text(
                 HTML(
                     '<ansiyellow>💡 Enter environment variables. Press Enter with empty name to finish.</ansiyellow>'
@@ -392,9 +396,7 @@ class MCPConfigEditor:
                     server['command'] = new_command
 
                 # Edit args
-                if confirm(
-                    f'Edit arguments? Current: {server.get("args", [])}', default=False
-                ):
+                if confirm(f'Edit arguments? Current: {server.get("args", [])}'):
                     args = []
                     print_formatted_text(
                         HTML(
@@ -412,8 +414,7 @@ class MCPConfigEditor:
 
                 # Edit environment variables
                 if confirm(
-                    f'Edit environment variables? Current: {list(server.get("env", {}).keys())}',
-                    default=False,
+                    f'Edit environment variables? Current: {list(server.get("env", {}).keys())}'
                 ):
                     env = {}
                     print_formatted_text(
@@ -482,10 +483,7 @@ class MCPConfigEditor:
             server_config = templates[choice].copy()
 
             # Allow customization
-            if confirm(
-                f'Add "{server_config["name"]}" server with default settings?',
-                default=True,
-            ):
+            if confirm(f'Add "{server_config["name"]}" server with default settings?'):
                 servers = self.get_mcp_servers()
                 servers.append(server_config)
                 print_formatted_text(
@@ -548,11 +546,11 @@ class MCPConfigEditor:
                     self.save_config()
                     break
                 else:
-                    if confirm('Save configuration anyway?', default=False):
+                    if confirm('Save configuration anyway?'):
                         self.save_config()
                         break
             elif choice == '8':
-                if confirm('Exit without saving changes?', default=False):
+                if confirm('Exit without saving changes?'):
                     break
             else:
                 print_formatted_text(HTML('<ansired>❌ Invalid option</ansired>'))

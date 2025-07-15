@@ -1,6 +1,7 @@
 import json
 import hashlib
 import time
+import requests
 from pathlib import Path
 
 import toml
@@ -15,17 +16,46 @@ from openhands.llm.metrics import Metrics
 _LOCAL_CONFIG_FILE_PATH = Path.home() / '.openhands' / 'config.toml'
 _SNOW_AUTH_FILE_PATH = Path.home() / '.openhands' / 'snow_auth.json'
 _DEFAULT_CONFIG: dict[str, dict[str, list[str]]] = {'sandbox': {'trusted_dirs': []}}
+_SNOW_API_ENDPOINT = 'https://api-kratos.dev.snowcell.io/auth/validate'
 
 
 # SNOW Authentication functions
-def store_snow_token(token: str) -> bool:
-    """Store SNOW authentication token securely."""
+def validate_snow_token_with_api(token: str) -> bool:
+    """Validate SNOW token with the API endpoint."""
     try:
+        headers = {'x-api-token': token, 'Content-Type': 'application/json'}
+
+        response = requests.get(
+            _SNOW_API_ENDPOINT, headers=headers, timeout=10  # 10 second timeout
+        )
+
+        if response.status_code == 200:
+            try:
+                data = response.json()
+                return data.get('status') == 'success'
+            except ValueError:
+                return False
+
+        return False
+    except requests.RequestException:
+        return False
+    except Exception:
+        return False
+
+
+def store_snow_token(token: str) -> bool:
+    """Store SNOW authentication token after validating with API."""
+    try:
+        # First validate the token with the API
+        if not validate_snow_token_with_api(token):
+            return False
+
         # Ensure the directory exists
         _SNOW_AUTH_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-        # Create auth data with timestamp
+        # Create auth data with timestamp and actual token
         auth_data = {
+            'token': token,  # Store actual token for future API calls
             'token_hash': hashlib.sha256(token.encode()).hexdigest(),
             'timestamp': time.time(),
             'status': 'active',
@@ -40,7 +70,7 @@ def store_snow_token(token: str) -> bool:
 
 
 def verify_snow_token() -> bool:
-    """Verify if user is authenticated with SNOW."""
+    """Verify if user is authenticated with SNOW by checking API."""
     try:
         if not _SNOW_AUTH_FILE_PATH.exists():
             return False
@@ -48,8 +78,17 @@ def verify_snow_token() -> bool:
         with open(_SNOW_AUTH_FILE_PATH, 'r') as f:
             auth_data = json.load(f)
 
-        # Check if token is active (no expiration)
-        return auth_data.get('status') == 'active'
+        # Check if token is active and validate with API
+        if auth_data.get('status') != 'active':
+            return False
+
+        # Get the actual token and validate with API
+        token = auth_data.get('token')
+        if not token:
+            return False
+
+        # Validate token with API
+        return validate_snow_token_with_api(token)
     except Exception:
         return False
 
