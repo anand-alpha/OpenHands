@@ -34,9 +34,29 @@ def display_settings(config: OpenHandsConfig) -> None:
     llm_config = config.get_llm_config()
     advanced_llm_settings = True if llm_config.base_url else False
 
+    # Check if this is a deployed model
+    is_deployed_model = (
+        llm_config.model
+        and llm_config.model.startswith('hosted_vllm/')
+        and llm_config.base_url
+        and 'snowcell.io' in llm_config.base_url
+    )
+
     # Prepare labels and values based on settings
     labels_and_values = []
-    if not advanced_llm_settings:
+
+    if is_deployed_model:
+        # Display deployed model information
+        model_name = llm_config.model.replace('hosted_vllm/', '')
+        labels_and_values.extend(
+            [
+                ('   Configuration Type', 'Snowcell Deployed Model'),
+                ('   Model', model_name),
+                ('   Base URL', str(llm_config.base_url)),
+                ('   API Key', 'Snowcell Token' if llm_config.api_key else 'Not Set'),
+            ]
+        )
+    elif not advanced_llm_settings:
         # Attempt to determine provider, fallback if not directly available
         provider = getattr(
             llm_config,
@@ -448,3 +468,182 @@ async def modify_llm_settings_advanced(
     settings.enable_default_condenser = enable_memory_condensation
 
     await settings_store.store(settings)
+
+
+async def modify_deployed_models_settings(
+    config: OpenHandsConfig, settings_store: FileSettingsStore
+) -> None:
+    """Configure deployed models with predefined snowcell hosted models."""
+    from openhands.cli.utils import get_snow_auth_info
+
+    session = PromptSession(key_bindings=kb_cancel())
+
+    # Check for snowcell authentication
+    auth_info = get_snow_auth_info()
+    if not auth_info.get('authenticated'):
+        print_formatted_text(
+            HTML(
+                '<ansired>❌ Snowcell authentication required for deployed models</ansired>'
+            )
+        )
+        print_formatted_text(
+            HTML('<grey>Please login with: snow --token <your-token></grey>')
+        )
+        return
+
+    # Get the token to use as API key
+    snow_token = auth_info.get('token')
+    if not snow_token:
+        print_formatted_text(
+            HTML('<ansired>❌ Unable to retrieve Snowcell token</ansired>')
+        )
+        return
+
+    # Define deployed model options
+    deployed_models = {
+        '1': {
+            'name': 'Qwen AI Chat',
+            'model': 'hosted_vllm/qwenai-chat',
+            'base_url': 'http://inference.snowcell.io/v1',
+            'description': 'High-performance conversational AI model optimized for chat and code assistance',
+        },
+        '2': {
+            'name': 'Qwen AI Code',
+            'model': 'hosted_vllm/qwenai-code',
+            'base_url': 'http://inference.snowcell.io/v1',
+            'description': 'Specialized coding model for software development tasks',
+        },
+        '3': {
+            'name': 'Qwen AI Instruct',
+            'model': 'hosted_vllm/qwenai-instruct',
+            'base_url': 'http://inference.snowcell.io/v1',
+            'description': 'Instruction-following model for complex reasoning tasks',
+        },
+    }
+
+    try:
+        print_formatted_text(HTML('<ansiblue>📦 Snowcell Deployed Models</ansiblue>'))
+        print_formatted_text(
+            HTML('<ansiyellow>Available deployed models:</ansiyellow>')
+        )
+
+        for key, model_info in deployed_models.items():
+            print_formatted_text(
+                HTML(f'  {key}. <ansigreen>{model_info["name"]}</ansigreen>')
+            )
+            print_formatted_text(
+                HTML(f'     Model: <ansicyan>{model_info["model"]}</ansicyan>')
+            )
+            print_formatted_text(HTML(f'     {model_info["description"]}'))
+        print_formatted_text('')
+
+        choice = await get_validated_input(
+            session,
+            '(Step 1/6) Select Deployed Model (1-3, CTRL-c to cancel): ',
+            validator=lambda x: x in deployed_models,
+            error_message='Invalid model choice. Please select 1, 2, or 3',
+        )
+
+        if choice not in deployed_models:
+            print_formatted_text(HTML('<ansired>❌ Invalid model choice</ansired>'))
+            return
+
+        selected_model = deployed_models[choice]
+
+        print_formatted_text(
+            HTML(f'\n<ansigreen>Selected: {selected_model["name"]}</ansigreen>')
+        )
+        print_formatted_text(HTML(f'<grey>Model: {selected_model["model"]}</grey>'))
+        print_formatted_text(
+            HTML(f'<grey>Base URL: {selected_model["base_url"]}</grey>')
+        )
+        print_formatted_text(HTML(f'<grey>API Key: Using your Snowcell token</grey>'))
+
+        # Get agent selection
+        agent_list = Agent.list_agents()
+        agent_completer = FuzzyWordCompleter(agent_list)
+        agent = await get_validated_input(
+            session,
+            '(Step 2/6) Agent (TAB for options, CTRL-c to cancel): ',
+            completer=agent_completer,
+            validator=lambda x: x in agent_list,
+            error_message='Invalid agent selected',
+        )
+
+        # Confirmation mode
+        enable_confirmation_mode = (
+            cli_confirm(
+                config,
+                question='(Step 3/6) Confirmation Mode (CTRL-c to cancel):',
+                choices=['Enable', 'Disable'],
+            )
+            == 0
+        )
+
+        # Memory condensation
+        enable_memory_condensation = (
+            cli_confirm(
+                config,
+                question='(Step 4/6) Memory Condensation (CTRL-c to cancel):',
+                choices=['Enable', 'Disable'],
+            )
+            == 0
+        )
+
+    except (
+        UserCancelledError,
+        KeyboardInterrupt,
+        EOFError,
+    ):
+        return
+
+    # Save settings confirmation
+    save_settings = save_settings_confirmation(config)
+    if not save_settings:
+        return
+
+    # Update configuration
+    llm_config = config.get_llm_config()
+    llm_config.model = selected_model['model']
+    llm_config.base_url = selected_model['base_url']
+    llm_config.api_key = SecretStr(snow_token)
+    config.set_llm_config(llm_config)
+
+    config.default_agent = agent
+    config.security.confirmation_mode = enable_confirmation_mode
+
+    # Configure agent
+    agent_config = config.get_agent_config(config.default_agent)
+    if enable_memory_condensation:
+        agent_config.condenser = LLMSummarizingCondenserConfig(
+            llm_config=llm_config,
+            type='llm',
+        )
+    else:
+        agent_config.condenser = NoOpCondenserConfig(type='noop')
+    config.set_agent_config(agent_config)
+
+    # Store settings
+    settings = await settings_store.load()
+    if not settings:
+        settings = Settings()
+
+    settings.llm_model = selected_model['model']
+    settings.llm_api_key = SecretStr(snow_token)
+    settings.llm_base_url = selected_model['base_url']
+    settings.agent = agent
+    settings.confirmation_mode = enable_confirmation_mode
+    settings.enable_default_condenser = enable_memory_condensation
+
+    await settings_store.store(settings)
+
+    print_formatted_text(
+        HTML(
+            '<ansigreen>✅ Deployed model configuration saved successfully!</ansigreen>'
+        )
+    )
+    print_formatted_text(
+        HTML(
+            f'<grey>Using {selected_model["name"]} with Snowcell authentication</grey>'
+        )
+    )

@@ -10,6 +10,7 @@ from openhands.cli.settings import (
     display_settings,
     modify_llm_settings_advanced,
     modify_llm_settings_basic,
+    modify_deployed_models_settings,
 )
 from openhands.cli.tui import (
     COLOR_GREY,
@@ -240,6 +241,7 @@ async def handle_settings_command(
         [
             'Basic',
             'Advanced',
+            'Deployed Models',
             'Go back',
         ],
     )
@@ -248,6 +250,8 @@ async def handle_settings_command(
         await modify_llm_settings_basic(config, settings_store)
     elif modify_settings == 1:
         await modify_llm_settings_advanced(config, settings_store)
+    elif modify_settings == 2:
+        await modify_deployed_models_settings(config, settings_store)
 
 
 # FIXME: Currently there's an issue with the actual 'resume' behavior.
@@ -384,7 +388,9 @@ def handle_snow_login_command(token: str) -> None:
     if not token:
         print_formatted_text('')
         print_formatted_text(HTML('<ansired>Error: Token is required</ansired>'))
-        print_formatted_text(HTML('<grey>Usage: snow --token &lt;your-token&gt;</grey>'))
+        print_formatted_text(
+            HTML('<grey>Usage: snow --token &lt;your-token&gt;</grey>')
+        )
         print_formatted_text('')
         return
 

@@ -70,7 +70,7 @@ COMMANDS = {
     '/init': 'Initialize a new repository',
     '/status': 'Display conversation details and usage metrics',
     '/new': 'Create a new conversation',
-    '/settings': 'Display and modify current settings',
+    '/settings': 'Display and modify current settings (including deployed models)',
     '/resume': 'Resume the agent when paused',
     'snow --token <token>': 'Login to Snowcell with authentication token',
     'snow --chat': 'Start chat session with AI assistant',
@@ -148,9 +148,9 @@ def display_banner(session_id: str) -> None:
      ___) | | | | (_) \ V  V / (_| (_) | (_| |  __/
     |____/|_| |_|\___/ \_/\_/ \___\___/ \__,_|\___|
         </gold>"""
-            ),
-            style=DEFAULT_STYLE,
-        )
+        ),
+        style=DEFAULT_STYLE,
+    )
     print_formatted_text(HTML(f'<grey>Snowcode AI Assistant v{__version__}</grey>'))
 
     print_formatted_text('')

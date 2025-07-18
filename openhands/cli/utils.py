@@ -99,6 +99,7 @@ def get_snow_auth_info() -> dict:
         if not _SNOW_AUTH_FILE_PATH.exists():
             return {
                 'authenticated': False,
+                'token': None,
                 'token_age': None,
                 'reason': 'No authentication found',
             }
@@ -108,9 +109,11 @@ def get_snow_auth_info() -> dict:
 
         token_age = time.time() - auth_data.get('timestamp', 0)
         authenticated = auth_data.get('status') == 'active'
+        token = auth_data.get('token') if authenticated else None
 
         return {
             'authenticated': authenticated,
+            'token': token,
             'token_age': token_age,
             'expires_in': None,  # Token never expires
             'reason': None if authenticated else 'Invalid token status',
@@ -118,6 +121,7 @@ def get_snow_auth_info() -> dict:
     except Exception:
         return {
             'authenticated': False,
+            'token': None,
             'token_age': None,
             'reason': 'Error reading authentication data',
         }

@@ -9,6 +9,7 @@ A secure, company-branded command-line interface for authentication and access t
 - [Quick Start](#quick-start)
 - [Commands Reference](#commands-reference)
 - [Usage Examples](#usage-examples)
+- [Deployed Models Configuration](#deployed-models-configuration)
 - [Implementation Details](#implementation-details)
 - [Security](#security)
 - [Troubleshooting](#troubleshooting)
@@ -23,6 +24,7 @@ A secure, company-branded command-line interface for authentication and access t
 ✅ **Zero OpenHands Exposure**: No OpenHands commands or branding visible to users
 ✅ **Session Management**: Status checking, secure logout, and token validation
 ✅ **Auto-Launch Chat**: Seamless transition from login to AI chat interface
+✅ **Deployed Models**: Pre-configured AI models with automatic Snowcell token integration
 
 ---
 
@@ -119,6 +121,7 @@ snow --status
 ```bash
 snow --chat
 ```
+
 ### `snow --logout`
 
 **Purpose**: End session and clear authentication
@@ -225,6 +228,114 @@ Your intelligent AI-powered assistant
 ✓ Successfully logged out from Snowcell
 Thank you for using Snowcell AI Assistant!
 ```
+
+---
+
+## Deployed Models Configuration
+
+### Overview
+
+Snowcell provides pre-configured AI models hosted on dedicated infrastructure. These models are automatically configured with your Snowcell authentication token, eliminating the need for separate API keys.
+
+### Available Models
+
+| Model                | ID                            | Description                                                               |
+| -------------------- | ----------------------------- | ------------------------------------------------------------------------- |
+| **Qwen AI Chat**     | `hosted_vllm/qwenai-chat`     | High-performance conversational AI optimized for chat and code assistance |
+| **Qwen AI Code**     | `hosted_vllm/qwenai-code`     | Specialized coding model for software development tasks                   |
+| **Qwen AI Instruct** | `hosted_vllm/qwenai-instruct` | Instruction-following model for complex reasoning tasks                   |
+
+### Configuration Steps
+
+1. **Authenticate with Snowcell**
+
+   ```bash
+   snow --token <your-token>
+   ```
+
+2. **Start the AI Assistant**
+
+   ```bash
+   snow --chat
+   ```
+
+3. **Access Settings**
+
+   ```bash
+   > /settings
+   ```
+
+4. **Select Deployed Models**
+
+   ```
+   /settings
+
+     Basic
+   > Advanced
+     Deployed Models  ← Select this option
+     Go back
+   ```
+
+5. **Choose Your Model**
+
+   ```
+   📦 Snowcell Deployed Models
+   Available deployed models:
+     1. Qwen AI Chat
+        Model: hosted_vllm/qwenai-chat
+        High-performance conversational AI model optimized for chat and code assistance
+     2. Qwen AI Code
+        Model: hosted_vllm/qwenai-code
+        Specialized coding model for software development tasks
+     3. Qwen AI Instruct
+        Model: hosted_vllm/qwenai-instruct
+        Instruction-following model for complex reasoning tasks
+
+   (Step 1/6) Select Deployed Model (1-3, CTRL-c to cancel): 1
+   ```
+
+6. **Complete Configuration**
+
+   ```
+   Selected: Qwen AI Chat
+   Model: qwenai-chat
+   Base URL: http://inference.snowcell.io/v1
+   API Key: Using your Snowcell token
+
+   (Step 2/6) Agent (TAB for options, CTRL-c to cancel): CodeActAgent
+   (Step 3/6) Confirmation Mode (CTRL-c to cancel):
+
+   > Enable
+     Disable
+
+   (Step 4/6) Memory Condensation (CTRL-c to cancel):
+
+   > Enable
+     Disable
+
+   Save new settings? (They will take effect after restart)
+
+   > Yes, save
+     No, discard
+   ```
+
+### Automatic Configuration
+
+When you select a deployed model, the system automatically configures:
+
+- ✅ **Model Endpoint**: `http://inference.snowcell.io/v1`
+- ✅ **API Authentication**: Your Snowcell token (same as login token)
+- ✅ **Model Selection**: The chosen AI model
+- ✅ **Agent Configuration**: Selected agent with proper settings
+- ✅ **Security Settings**: Confirmation mode and memory condensation as configured
+
+### Benefits
+
+- **Seamless Integration**: No additional API keys required
+- **Optimized Performance**: Models hosted on dedicated Snowcell infrastructure
+- **Automatic Updates**: Models are continuously updated and maintained
+- **Cost Efficiency**: Pricing included in your Snowcell subscription
+- **Security**: All communication secured with your authenticated token
 
 ---
 
@@ -445,8 +556,3 @@ MIT License - See LICENSE file for details
 ---
 
 _This documentation covers the complete Snowcell CLI implementation. For technical support or feature requests, contact your development team._
-
-
-
-
-
